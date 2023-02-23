@@ -26,6 +26,9 @@
 /.project$
 /.settings$
 
+/notes.todo
+/notes_archive.todo
+
 .orig..*$
 .orig$
 .chg..*$

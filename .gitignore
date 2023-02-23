@@ -34,10 +34,6 @@
 .map$
 ..*.swp$
 
-.git$
-.gitignore$
-.travis.yml$
-
 .sass-cache
 
 /modules/drives/plugins/googledrive_key.p12

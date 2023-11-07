@@ -164,6 +164,7 @@ $db->query("CREATE TABLE `agenda` (
     `title` VARCHAR(255) NOT NULL,
     `content` TEXT NOT NULL,
     `start` DATETIME NOT NULL,
+    `end` DATETIME NOT NULL,
     `duration` VARCHAR(20) NOT NULL,
     `visible` TINYINT(4),
     `recursion_period` varchar(30) DEFAULT NULL,
@@ -182,6 +183,7 @@ $db->query("CREATE TABLE `course` (
   `prof_names` VARCHAR(255) NOT NULL DEFAULT '',
   `public_code` VARCHAR(100) NOT NULL DEFAULT '',
   `created` DATETIME NOT NULL,
+  `updated` DATETIME NULL,
   `doc_quota` FLOAT NOT NULL default '104857600',
   `video_quota` FLOAT NOT NULL default '104857600',
   `group_quota` FLOAT NOT NULL default '104857600',
@@ -191,7 +193,7 @@ $db->query("CREATE TABLE `course` (
   `glossary_index` BOOL NOT NULL DEFAULT 1,
   `view_type` VARCHAR(255) NOT NULL DEFAULT 'units',
   `start_date` DATE DEFAULT NULL,
-  `finish_date` DATE DEFAULT NULL,
+  `end_date` DATE DEFAULT NULL,
   `description` MEDIUMTEXT DEFAULT NULL,
   `home_layout` TINYINT(1) NOT NULL DEFAULT 1,
   `course_image` VARCHAR(400) NULL,
@@ -309,6 +311,7 @@ $db->query("CREATE TABLE `user` (
     email_public TINYINT(1) NOT NULL DEFAULT 0,
     phone_public TINYINT(1) NOT NULL DEFAULT 0,
     am_public TINYINT(1) NOT NULL DEFAULT 0,
+    pic_public TINYINT(1) NOT NULL DEFAULT 0,
     whitelist TEXT,
     eportfolio_enable TINYINT(1) NOT NULL DEFAULT 0,
     last_passreminder DATETIME DEFAULT NULL) $tbl_options");
@@ -334,6 +337,7 @@ $db->query("CREATE TABLE IF NOT EXISTS `personal_calendar` (
     `title` varchar(255) NOT NULL,
     `content` text NOT NULL,
     `start` datetime NOT NULL,
+    `end` datetime NOT NULL,
     `duration` time NOT NULL,
     `recursion_period` varchar(30) DEFAULT NULL,
     `recursion_end` date DEFAULT NULL,
@@ -366,6 +370,7 @@ $db->query("CREATE TABLE `admin_calendar` (
     `title` varchar(255) NOT NULL,
     `content` text NOT NULL,
     `start` datetime NOT NULL,
+    `end` datetime NOT NULL,
     `duration` time NOT NULL,
     `recursion_period` varchar(30) DEFAULT NULL,
     `recursion_end` date DEFAULT NULL,
@@ -376,8 +381,7 @@ $db->query("CREATE TABLE `admin_calendar` (
     KEY `user_events` (`user_id`),
     KEY `admin_events_dates` (`start`)) $tbl_options");
 
-// table for loginout rollups
-// only contains LOGIN events summed up by a period (typically weekly)
+//  loginout rollups
 $db->query("CREATE TABLE `loginout_summary` (
     id int(11) NOT NULL auto_increment,
     login_sum int(11) unsigned  NOT NULL default 0,
@@ -385,16 +389,14 @@ $db->query("CREATE TABLE `loginout_summary` (
     end_date datetime NOT NULL,
     PRIMARY KEY (id)) $tbl_options");
 
-// table keeping data for monthly reports
+// monthly reports
 $db->query("CREATE TABLE monthly_summary (
     id int(11) NOT NULL auto_increment,
-    `month` varchar(20)  NOT NULL default 0,
+    `month` DATE NOT NULL,
     profesNum int(11) NOT NULL default 0,
     studNum int(11) NOT NULL default 0,
     visitorsNum int(11) NOT NULL default 0,
-    coursNum int(11) NOT NULL default 0,
-    logins int(11) NOT NULL default 0,
-    details MEDIUMTEXT,
+    coursNum int(11) NOT NULL default 0,    
     PRIMARY KEY (id)) $tbl_options");
 
 $db->query("CREATE TABLE IF NOT EXISTS `document` (
@@ -1134,7 +1136,8 @@ $db->query("CREATE TABLE IF NOT EXISTS `exercise` (
     `ip_lock` TEXT NULL DEFAULT NULL,
     `password_lock` VARCHAR(255) NULL DEFAULT NULL,
     `continue_time_limit` INT(11) NOT NULL DEFAULT 0,
-    `calc_grade_method` TINYINT DEFAULT 1
+    `calc_grade_method` TINYINT DEFAULT 1,
+    `general_feedback` TEXT DEFAULT NULL                                      
     ) $tbl_options");
 
 $db->query("CREATE TABLE IF NOT EXISTS `exercise_to_specific` (
@@ -1633,7 +1636,7 @@ $db->query("CREATE TABLE IF NOT EXISTS `tc_session` (
     `public` enum('0','1') DEFAULT NULL,
     `active` enum('0','1') DEFAULT NULL,
     `running_at` int(11) DEFAULT NULL,
-    `meeting_id` varchar(42) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+    `meeting_id` varchar(255) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
     `mod_pw` varchar(255) DEFAULT NULL,
     `att_pw` varchar(255) DEFAULT NULL,
     `unlock_interval` int(11) DEFAULT NULL,
@@ -2228,8 +2231,18 @@ $db->query("CREATE TABLE `user_analytics` (
   `updated` datetime NOT NULL,
   PRIMARY KEY (`id`)) $tbl_options");
 
+// Course pages
 
-// h5p
+$db->query("CREATE TABLE `page` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `course_id` int(11) DEFAULT NULL,
+  `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+  `path` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `visible` tinyint(4) DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `course_id_index` (`course_id`)) $tbl_options");
+
+// H5P
 
 $db->query("CREATE TABLE h5p_library (
     id INT(10) NOT NULL AUTO_INCREMENT,
@@ -2283,6 +2296,19 @@ $db->query("CREATE TABLE h5p_content_dependency (
     library_id INT(10) NOT NULL,
     dependency_type VARCHAR(10) NOT NULL,
   PRIMARY KEY(id)) $tbl_options");
+
+
+$db->query("CREATE TABLE api_token (
+    `id` smallint NOT NULL AUTO_INCREMENT,
+    `token` text CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    `name` text CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+    `comments` text CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+    `ip` varchar(45) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    `enabled` tinyint NOT NULL,
+    `created` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `expired` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`)) $tbl_options");
 
 $_SESSION['theme'] = 'modern';
 

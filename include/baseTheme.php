@@ -41,7 +41,7 @@ if (isset($toolContent_ErrorExists)) {
         $next = str_replace($urlAppend, '/', $_SERVER['REQUEST_URI']);
         header("Location:" . $urlServer . "main/login_form.php?next=" . urlencode($next));
     } else {
-        header("Location:" . $urlServer . "index.php");
+        redirect_to_home_page("main/portfolio.php");
     }
     exit();
 }
@@ -351,23 +351,55 @@ function view($view_file, $view_data = array()) {
                     background:$theme_options_styles[leftNavBgColor];
                 }
 
-                #bgr-cheat-header{
-                    background:$rgba_no_alpha
-                };
+                .nav-link-adminTools.normalColorBlueText.active{
+                    background-color: $theme_options_styles[leftNavBgColor];
+                    color: #ffffff !important;
+                }
 
-                @media(max-width: 992px){
-                    #leftnav{
-                        background:$rgba_no_alpha;
+                #bgr-cheat-header, .ContentLeftNav{
+                    background:$rgba_no_alpha;
+                }
+
+                .bgTheme{
+                    background-color:$rgba_no_alpha !important;
+                }
+
+                @media(max-width:991px){
+                    .offcanvas-start.d-lg-none.show{
+                        background-color:$rgba_no_alpha !important;
                     }
                 }
-            
-                .modal-content-opencourses{
-                    background:$theme_options_styles[leftNavBgColor];
+
+                .myCalendarEvents .fc-header-toolbar{
+                    background:$rgba_no_alpha;
+                }
+
+                @media(max-width: 991px){
+                    #leftnav,.ContentLeftNav{
+                        background:$rgba_no_alpha;
+                    }
+                    .userLoginMobile:hover{
+                        background-color:$rgba_no_alpha;
+                    }
+                }
+
+                .myCalendarEvents .fc-header-toolbar .fc-right .fc-agendaWeek-button.fc-state-active,
+                .myCalendarEvents .fc-header-toolbar .fc-right .fc-agendaDay-button.fc-state-active,
+                .personal-calendar-header .btn-group .btn.active{
+                    background:$theme_options_styles[linkColor] !important;
+                }
+
+                .btn_left_rigth{
+                    border:solid 1px $theme_options_styles[leftNavBgColor];
                 }
 
                 .block-title {
                     color: $theme_options_styles[leftNavBgColor];
                     border-bottom: 1px solid $theme_options_styles[leftNavBgColor];
+                }
+
+                #cal-slide-content a.event-item {
+                    color: $theme_options_styles[leftNavBgColor];
                 }
 
                 .openCoursesTextHome{
@@ -393,10 +425,6 @@ function view($view_file, $view_data = array()) {
 
                 input[type='checkbox']{
                     accent-color: $theme_options_styles[leftNavBgColor];
-                }
-                
-                .cal-day-today > .number-day-cal{ 
-                    background-color: $theme_options_styles[leftNavBgColor];
                 }
 
                 .manage-course-li-active{
@@ -438,13 +466,12 @@ function view($view_file, $view_data = array()) {
                     color: $theme_options_styles[linkColor];
                 }
 
-                .modal-content-opencourses{
-                    border:solid 8px $theme_options_styles[linkColor];
-                }
+                
 
-                .Help-text-panel-heading {
-                    color:  $theme_options_styles[linkColor];
+                .Help-text-panel-heading, .normalColorBlueText {
+                    color:  $theme_options_styles[linkColor] !important;
                 }
+                
 
                 .slider-round { 
                     background-color: $theme_options_styles[linkColor];
@@ -461,9 +488,9 @@ function view($view_file, $view_data = array()) {
                 .circle-img-contant { 
                     background-color: $theme_options_styles[linkColor];
                 }
-            "; 
+            ";
         }
-        
+
         if (!empty($theme_options_styles['linkHoverColor'])){
             $styles_str .= "
                 a:hover, a:focus {
@@ -479,8 +506,8 @@ function view($view_file, $view_data = array()) {
                     color: #ffffff;
                 }
             ";
-        } 
-        
+        }
+
         if (!empty($theme_options_styles['leftSubMenuFontColor'])){
             $styles_str .= "
                 #leftnav .panel a{
@@ -491,7 +518,7 @@ function view($view_file, $view_data = array()) {
                 }
             ";
         }
-        
+
 
         if (!empty($theme_options_styles['leftSubMenuHoverBgColor'])){
             $styles_str .= "
@@ -545,7 +572,7 @@ function view($view_file, $view_data = array()) {
                 }
             ";
         }
-        
+
         if (!empty($theme_options_styles['leftSubMenuHoverFontColor'])){
             $styles_str .= "
                 #leftnav .panel a.list-group-item:hover{
@@ -556,8 +583,8 @@ function view($view_file, $view_data = array()) {
                 }
 
             ";
-        } 
-        
+        }
+
         if (!empty($theme_options_styles['leftMenuFontColor'])){
             $styles_str .= "
                 #leftnav .panel a.parent-menu{
@@ -570,7 +597,7 @@ function view($view_file, $view_data = array()) {
                 
             ";
         }
-        
+
         if (!empty($theme_options_styles['leftMenuBgColor'])){
             $styles_str .= "
                 #leftnav .panel a.parent-menu{
@@ -583,7 +610,7 @@ function view($view_file, $view_data = array()) {
                 
             ";
         }
-        
+
         if (!empty($theme_options_styles['leftMenuHoverFontColor'])){
             $styles_str .= "
                 #leftnav .panel .panel-sidebar-heading:hover{
@@ -595,7 +622,7 @@ function view($view_file, $view_data = array()) {
                 }
             ";
         }
-        
+
         if (!empty($theme_options_styles['leftMenuSelectedFontColor'])){
             $styles_str .= "
                 #leftnav .panel a.parent-menu:not(.collapsed){
@@ -613,11 +640,11 @@ function view($view_file, $view_data = array()) {
                 
             ";
         }
-        
+
         if (isset($theme_options_styles['imageUpload'])){
             $logo_img =  "$urlThemeData/$theme_options_styles[imageUpload]";
         }
-        
+
         if (isset($theme_options_styles['imageUploadSmall'])){
             $logo_img_small = "$urlThemeData/$theme_options_styles[imageUploadSmall]";
             $styles_str .= "
@@ -628,7 +655,7 @@ function view($view_file, $view_data = array()) {
                     }
                 }";
         }
-        
+
     }else{
 
         $head_content .= "

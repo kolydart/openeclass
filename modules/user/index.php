@@ -130,7 +130,7 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
     foreach ($result as $myrow) {
         $full_name = sanitize_utf8($myrow->givenname . " " . $myrow->surname);
         $am_message = sanitize_utf8(empty($myrow->am) ? '' : ("<div class='right'>" . q($myrow->am) . "</div>"));
-        $stats_icon = icon('fa-bar-chart', $langUserStats, "../usage/index.php?course=$course_code&amp;id=$myrow->id");
+        $stats_icon = icon('fa-bar-chart', $langUserStats, "../usage/userduration.php?course=$course_code&amp;u=$myrow->id");
         //create date field with unregister button
         $date_field = $myrow->reg_date ? format_locale_date(strtotime($myrow->reg_date), 'short', false) : $langUnknownDate;
 
@@ -198,6 +198,12 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
 
         $user_role_string = implode(',<br>', $user_roles);
 
+        if (!get_user_email_notification($myrow->id, $course_id)) {
+            $email_exlamation_icon = "&nbsp;&nbsp;<span class='fa fa-exclamation-triangle space-after-icon' data-bs-toggle='tooltip' data-bs-placement='bottom' data-bs-html='true' data-bs-title='$langNoUserEmailLegend'></span>";
+        } else {
+            $email_exlamation_icon = '';
+        }
+
         $nameColumn = "
                         <div class='pull-left' style='width: 32px ; margin-right: 10px;'>
                             <img style='border-radius:50%; border:solid 2px #e8e8e8; 'class='img-circle' src='".user_icon($myrow->id) . "' />
@@ -205,7 +211,7 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                         </div>
                         <div class='pull-left'>
                             <div style='padding-bottom:2px;'>".display_user($myrow->id, false, false, '', $course_code)."</div>
-                            <div><small><a href='mailto:" . $myrow->email . "'>" . $myrow->email . "</a></small></div>
+                            <div><small><a href='mailto:" . $myrow->email . "'>" . $myrow->email . "</a>$email_exlamation_icon</small></div>
                             <div class='text-muted'><small>$am_message</small></div>
                         </div>";
         $roleColumn = "<div class='text-muted'>$user_role_string</div>";
@@ -339,11 +345,8 @@ $data['action_bar'] = action_bar([
     ['title' => $langGroupUserManagement,
       'url' => "../group/index.php?course=$course_code",
       'icon' => 'fa-users'],
-     ['title' => $langDumpUser,
+    ['title' => $langDumpUser,
       'url' => "dumpuser.php?course=$course_code",
-      'icon' => 'fa-file-archive-o'],
-    ['title' => "$langDumpUser ($langcsvenc2)",
-      'url' => "dumpuser.php?course=$course_code&amp;enc=UTF-8",
       'icon' => 'fa-file-archive-o'],
     ['title' => $langDelUsers,
       'url' => "../course_info/refresh_course.php?course=$course_code&amp;from_user=true",

@@ -1,10 +1,10 @@
 <?php
 
 /* ========================================================================
- * Open eClass 3.6
+ * Open eClass 4.0
  * E-learning and Course Management System
  * ========================================================================
- * Copyright 2003-2017  Greek Universities Network - GUnet
+ * Copyright 2003-2023  Greek Universities Network - GUnet
  * A full copyright notice can be read in "/info/copyright.txt".
  * For a full list of contributors, see "credits.txt".
  *
@@ -52,7 +52,7 @@ load_js('tools.js');
 
 $myrow = Database::get()->querySingle("SELECT surname, givenname, username, email, am, phone,
                                             lang, status, has_icon, description,
-                                            email_public, phone_public, am_public, password
+                                            email_public, phone_public, am_public, pic_public, password
                                         FROM user WHERE id = ?d", $uid);
 
 
@@ -80,8 +80,15 @@ if (in_array($password, array('shibboleth', 'cas', 'ldap'))) {
 
 // Handle AJAX profile image delete
 if (isset($_POST['delimage'])) {
-    @unlink($image_path . '_' . IMAGESIZE_LARGE . '.jpg');
-    @unlink($image_path . '_' . IMAGESIZE_SMALL . '.jpg');
+    $hash = profile_image_hash($uid);
+    $images = [
+        $image_path . '_' . IMAGESIZE_LARGE . '.jpg',
+        $image_path . '_' . IMAGESIZE_SMALL . '.jpg',
+        "{$image_path}_{$hash}_" . IMAGESIZE_LARGE . '.jpg',
+        "{$image_path}_{$hash}_" . IMAGESIZE_SMALL . '.jpg'];
+    foreach ($images as $image) {
+        @unlink($image);
+    }
     Database::get()->query("UPDATE user SET has_icon = 0 WHERE id = ?d", $uid);
     Log::record(0, 0, LOG_PROFILE, array('uid' => intval($_SESSION['uid']),
                                          'deleteimage' => 1));
@@ -89,6 +96,7 @@ if (isset($_POST['delimage'])) {
 }
 
 if (isset($_POST['submit'])) {
+    print_a($_POST);
     if (!isset($_POST['token']) || !validate_csrf_token($_POST['token'])) {
         csrf_token_error();
     }
@@ -113,7 +121,8 @@ if (isset($_POST['submit'])) {
                     'username_form' => $allow_username_change,
                     'email_public' => false,
                     'phone_public' => false,
-                    'am_public' => false);
+                    'am_public' => false,
+                    'pic_public' => false);
 
     //add custom profile fields required variables
     augment_registered_posted_variables_arr($var_arr);
@@ -127,9 +136,6 @@ if (isset($_POST['submit'])) {
             $departments = $_POST['department'];
         }
     }
-    $email_public = valid_access($email_public);
-    $phone_public = valid_access($phone_public);
-    $am_public = valid_access($am_public);
 
     // upload user picture
     if (isset($_FILES['userimage']) && is_uploaded_file($_FILES['userimage']['tmp_name'])) {
@@ -138,17 +144,14 @@ if (isset($_POST['submit'])) {
 
         $type = $_FILES['userimage']['type'];
         $image_file = $_FILES['userimage']['tmp_name'];
+        $image_base = $image_path . '_' . profile_image_hash($uid) . '_';
 
-        if (!copy_resized_image($image_file, $type, IMAGESIZE_LARGE, IMAGESIZE_LARGE, $image_path . '_' . IMAGESIZE_LARGE . '.jpg')) {
-            //Session::Messages($langInvalidPicture);
-            Session::flash('message',$langInvalidPicture);
-            Session::flash('alert-class', 'alert-warning');
+        if (!copy_resized_image($image_file, $type, IMAGESIZE_LARGE, IMAGESIZE_LARGE, $image_base . IMAGESIZE_LARGE . '.jpg')) {
+            Session::Messages($langInvalidPicture);
             redirect_to_home_page("main/profile/profile.php");
         }
-        if (!copy_resized_image($image_file, $type, IMAGESIZE_SMALL, IMAGESIZE_SMALL, $image_path . '_' . IMAGESIZE_SMALL . '.jpg')) {
-            //Session::Messages($langInvalidPicture);
-            Session::flash('message',$langInvalidPicture);
-            Session::flash('alert-class', 'alert-warning');
+        if (!copy_resized_image($image_file, $type, IMAGESIZE_SMALL, IMAGESIZE_SMALL, $image_base . IMAGESIZE_SMALL . '.jpg')) {
+            Session::Messages($langInvalidPicture);
             redirect_to_home_page("main/profile/profile.php");
         }
         Database::get()->query("UPDATE user SET has_icon = 1 WHERE id = ?d", $_SESSION['uid']);
@@ -160,17 +163,13 @@ if (isset($_POST['submit'])) {
 
     // check if email is valid
     if (!empty($email_form) and !valid_email($email_form)) {
-        //Session::Messages($langEmailWrong);
-        Session::flash('message',$langEmailWrong);
-        Session::flash('alert-class', 'alert-warning');
+        Session::Messages($langEmailWrong);
         redirect_to_home_page("main/profile/profile.php");
     }
 
     // check if there are empty fields
     if (!$all_ok) {
-        //Session::Messages($langFieldsMissing);
-        Session::flash('message',$langFieldsMissing);
-        Session::flash('alert-class', 'alert-warning');
+        Session::Messages($langFieldsMissing);
         redirect_to_home_page("main/profile/profile.php");
     }
 
@@ -188,9 +187,7 @@ if (isset($_POST['submit'])) {
     if ($username_form != $_SESSION['uname']) {
         $username_check = Database::get()->querySingle("SELECT username FROM user WHERE username = ?s", $username_form);
         if ($username_check) {
-            //Session::Messages($langUserFree);
-            Session::flash('message',$langUserFree);
-            Session::flash('alert-class', 'alert-warning');
+            Session::Messages($langUserFree);
             redirect_to_home_page("main/profile/profile.php");
         }
     }
@@ -203,9 +200,7 @@ if (isset($_POST['submit'])) {
         foreach ($cpf_check as $cpf_error) {
             $cpf_error_str .= $cpf_error;
         }
-       // Session::Messages($cpf_error_str);
-        Session::flash('message',$cpf_error_str);
-        Session::flash('alert-class', 'alert-warning');
+        Session::Messages($cpf_error_str);
         redirect_to_home_page("main/profile/profile.php");
     }
 
@@ -226,13 +221,14 @@ if (isset($_POST['submit'])) {
                              am = ?s,
                              phone = ?s,
                              description = ?s,
-                             email_public = ?s,
-                             phone_public = ?s,
+                             email_public = ?d,
+                             phone_public = ?d,
                              receive_mail = ?d,
-                             am_public = ?d
+                             am_public = ?d,
+                             pic_public = ?d
                              $verified_mail_sql
                          WHERE id = ?d",
-                            $surname_form, $givenname_form, $username_form, $email_form, $am_form, $phone_form, $desc_form, $email_public, $phone_public, $subscribe, $am_public, $uid);
+                            $surname_form, $givenname_form, $username_form, $email_form, $am_form, $phone_form, $desc_form, $email_public, $phone_public, $subscribe, $am_public, $pic_public, $uid);
 
     //fill custom profile fields
     process_profile_fields_data(array('uid' => $uid, 'origin' => 'edit_profile'));
@@ -258,16 +254,12 @@ if (isset($_POST['submit'])) {
         if ($need_email_verification) { // email has been changed and needs verification
             redirect_to_home_page("modules/auth/mail_verify_change.php?from_profile=true");
         } else {
-           // Session::Messages($langProfileReg, 'alert-success');
-            Session::flash('message',$langProfileReg);
-            Session::flash('alert-class', 'alert-success');
+            Session::Messages($langProfileReg, 'alert-success');
             redirect_to_home_page("main/profile/display_profile.php");
         }
     }
     if ($old_language != $language) {
-       // Session::Messages($langProfileReg, 'alert-success');
-        Session::flash('message',$langProfileReg);
-        Session::flash('alert-class', 'alert-success');
+        Session::Messages($langProfileReg, 'alert-success');
         redirect_to_home_page("main/profile/display_profile.php");
     }
 }
@@ -284,9 +276,7 @@ if (isset($_GET['provider'])) {
             if ($auth_id and
                 Database::get()->query('DELETE FROM user_ext_uid
                     WHERE user_id = ?d AND auth_id = ?d', $uid, $auth_id)) {
-                //Session::Messages($langProfileReg, 'alert-success');
-                Session::flash('message',$langProfileReg);
-                Session::flash('alert-class', 'alert-success');
+                Session::Messages($langProfileReg, 'alert-success');
                 redirect_to_home_page('main/profile/profile.php');
             }
         } elseif ($_GET['action'] == 'connect') {
@@ -301,7 +291,7 @@ if (isset($_GET['provider'])) {
 		$_GET['provider'] = 'WindowsLive';
 	    }
 	    $hybridauth = new Hybridauth($config);
-        $allProviders = $hybridauth->getProviders();
+            $allProviders = $hybridauth->getProviders();
 
 	    if (count($allProviders) && in_array($_GET['provider'], $allProviders)) { //check if the provider is existent and valid - it's checked above
                 try {
@@ -356,21 +346,14 @@ if (isset($_GET['provider'])) {
                                 // HybridAuth provider uid is already in the db!
                                 // (which means the user tried to authenticate a second
                                 // eClass account with the same facebook etc. account)
-                                //Session::Messages($langProviderIdAlreadyExists, 'alert-warning');
-                                Session::flash('message',$langProviderIdAlreadyExists);
-                                Session::flash('alert-class', 'alert-warning');
+                                Session::Messages($langProviderIdAlreadyExists, 'alert-warning');
                             } else {
                                 Database::get()->querySingle('INSERT INTO user_ext_uid
                                     SET user_id = ?d, auth_id = ?d, uid = ?s',
                                     $uid, $providerAuthId, $user_data->identifier);
-                                //Session::Messages($langProfileReg, 'alert-success');
-                                Session::flash('message',$langProfileReg);
-                                Session::flash('alert-class', 'alert-success');
                             }
                     } else {
-                        //Session::Messages($langProviderError, 'alert-danger');
-                        Session::flash('message',$langProviderError);
-                        Session::flash('alert-class', 'alert-danger');
+                        Session::Messages($langProviderError, 'alert-danger');
                     }
                     redirect_to_home_page('main/profile/profile.php');
                 } catch (Exception $e) {
@@ -381,45 +364,29 @@ if (isset($_GET['provider'])) {
                     // to know more please refer to Exceptions handling section on the userguide
                     switch($e->getCode()) {
                         case 0:
-                            //Session::Messages($langProviderError1, 'alert-danger');
-                            Session::flash('message',$langProviderError1);
-                            Session::flash('alert-class', 'alert-danger');
+                            Session::Messages($langProviderError1, 'alert-danger');
                             break;
                         case 1:
-                            //Session::Messages($langProviderError2, 'alert-danger');
-                            Session::flash('message',$langProviderError2);
-                            Session::flash('alert-class', 'alert-danger');
+                            Session::Messages($langProviderError2, 'alert-danger');
                             break;
                         case 2:
-                            //Session::Messages($langProviderError3, 'alert-danger');
-                            Session::flash('message',$langProviderError3);
-                            Session::flash('alert-class', 'alert-danger');
+                            Session::Messages($langProviderError3, 'alert-danger');
                             break;
                         case 3:
-                            //Session::Messages($langProviderError4, 'alert-danger');
-                            Session::flash('message',$langProviderError4);
-                            Session::flash('alert-class', 'alert-danger');
+                            Session::Messages($langProviderError4, 'alert-danger');
                             break;
                         case 4:
-                           // Session::Messages($langProviderError5, 'alert-danger');
-                            Session::flash('message',$langProviderError5);
-                            Session::flash('alert-class', 'alert-danger');
+                            Session::Messages($langProviderError5, 'alert-danger');
                             break;
                         case 5:
-                           // Session::Messages($langProviderError6, 'alert-danger');
-                            Session::flash('message',$langProviderError6);
-                            Session::flash('alert-class', 'alert-danger');
+                            Session::Messages($langProviderError6, 'alert-danger');
                             break;
                         case 6:
-                            //Session::Messages($langProviderError7, 'alert-danger');
-                            Session::flash('message',$langProviderError7);
-                            Session::flash('alert-class', 'alert-danger');
+                            Session::Messages($langProviderError7, 'alert-danger');
                             $adapter->disconnect();
                             break;
                         case 7:
-                            //Session::Messages($langProviderError8, 'alert-danger');
-                            Session::flash('message',$langProviderError8);
-                            Session::flash('alert-class', 'alert-danger');
+                            Session::Messages($langProviderError8, 'alert-danger');
                             $adapter->disconnect();
                             break;
                     }
@@ -465,14 +432,13 @@ if (isset($_GET['msg'])) {
         default:
             exit;
     }
-    $tool_content .= "<table width='100%'><tbody><tr><td class='alert alert-danger'>$message$urlText</td></tr></tbody></table><br /><br />";
+    Session::Messages($message, 'alert-warning');
+    redirect_to_home_page('main/profile/profile.php');
 }
 
 $data['surname_form'] = q($myrow->surname);
 $data['givenname_form'] = q($myrow->givenname);
 $data['username_form'] = q($myrow->username);
-$data['email_public'] = q($myrow->email_public);
-$data['am_public'] = q($myrow->am_public);
 $data['email_form'] = q($myrow->email);
 $data['am_form'] = q($myrow->am);
 $data['phone_form'] = q($myrow->phone);
@@ -480,6 +446,20 @@ $data['phone_public'] = q($myrow->phone_public);
 $data['desc_form'] = $myrow->description;
 $data['userLang'] = $myrow->lang;
 $data['icon'] = $myrow->has_icon;
+$data['email_public_selected'] = $data['am_public_selected'] = $data['phone_public_selected'] = $data['pic_public_selected'] = '';
+
+if ($myrow->email_public) {
+    $data['email_public_selected'] = 'checked';
+}
+if ($myrow->am_public) {
+    $data['am_public_selected'] = 'checked';
+}
+if ($myrow->phone_public) {
+    $data['phone_public_selected'] = 'checked';
+}
+if ($myrow->pic_public) {
+    $data['pic_public_selected'] = 'checked';
+}
 
 $data['sec'] = $urlServer . 'main/profile/profile.php';
 $passurl = $urlServer . 'main/profile/password.php';
@@ -494,10 +474,6 @@ $data['action_bar'] =
             ]
         ]);
 
-$data['access_options'] = array(ACCESS_PROFS => $langProfileInfoProfs,
-                                ACCESS_USERS => $langProfileInfoUsers);
-
-
 if (get_user_email_notification_from_courses($uid)) {
     $data['selectedyes'] = 'checked';
     $data['selectedno'] = '';
@@ -505,6 +481,7 @@ if (get_user_email_notification_from_courses($uid)) {
     $data['selectedyes'] = '';
     $data['selectedno'] = 'checked';
 }
+
 
 if (get_config('email_verification_required')) {
     $user_email_status = get_mail_ver_status($uid);
@@ -579,18 +556,3 @@ $data['allProviders'] = $allProviders;
 
 $data['menuTypeID'] = 1;
 view('main.profile.edit', $data);
-
-
-/**
- *
- * @param type $val
- * @return int
- */
-function valid_access($val) {
-    $val = intval($val);
-    if (in_array($val, array(ACCESS_PRIVATE, ACCESS_PROFS, ACCESS_USERS))) {
-        return $val;
-    } else {
-        return 0;
-    }
-}

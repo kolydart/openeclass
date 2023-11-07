@@ -72,6 +72,7 @@ if (isset($_POST['submitExercise'])) {
         $exerciseTitle = trim($_POST['exerciseTitle']);
         $objExercise->updateTitle($exerciseTitle);
         $objExercise->updateDescription($_POST['exerciseDescription']);
+        $objExercise->updateFeedback($_POST['exerciseFeedback']);
         $objExercise->updateType($_POST['exerciseType']);
         $objExercise->updateRange($_POST['exerciseRange']);
         if (isset($_POST['exerciseIPLock'])) {
@@ -121,6 +122,7 @@ if (isset($_POST['submitExercise'])) {
     $exerciseId = $objExercise->selectId();
     $exerciseTitle = Session::has('exerciseTitle') ? Session::get('exerciseTitle') : $objExercise->selectTitle();
     $exerciseDescription = Session::has('exerciseDescription') ? Session::get('exerciseDescription') : $objExercise->selectDescription();
+    $exerciseFeedback = Session::has('exerciseFeedback') ? Session::get('exerciseFeedback') : $objExercise->selectFeedback();
     $exerciseType = Session::has('exerciseType') ? Session::get('exerciseType') : $objExercise->selectType();
     $exerciseRange = Session::has('exerciseRange') ? Session::get('exerciseRange') : $objExercise->selectRange();
     //more population need to be done
@@ -332,6 +334,15 @@ if (isset($_GET['modifyExercise']) or isset($_GET['NewExercise'])) {
                    " . rich_text_editor('exerciseDescription', 4, 30, $exerciseDescription) . "
                    </div>
                  </div>
+
+                 <div class='row form-group mt-4'>
+                   <label for='exerciseFeedback' class='col-md-3 col-12 control-label-notes mb-1'>$langExerciseFeedback:</label>
+                   <div class='col-md-9 col-12'>
+                       " . rich_text_editor('exerciseFeedback', 4, 30, $exerciseFeedback) . "
+                       <span class='help-block col-sm-offset-2 col-sm-10'>$langExerciseFeedbackInfo</span>
+                       </div>
+                 </div>
+                 
                  <div class='row form-group mt-4'>
                      <label for='exerciseDescription' class='col-md-3 col-12 control-label-notes mb-1'>$langViewShow:</label>
                      <div class='col-md-9 col-12'>
@@ -525,7 +536,7 @@ if (isset($_GET['modifyExercise']) or isset($_GET['NewExercise'])) {
                                 </tr>
                                 <tr>
                                   <td>
-                                    <select class='form-select h-100' id='assign_box' size='10' multiple>
+                                    <select class='form-select h-100 rounded-0' id='assign_box' size='10' multiple>
                                     ".((isset($unassigned_options)) ? $unassigned_options : '')."
                                     </select>
                                   </td>
@@ -533,7 +544,7 @@ if (isset($_GET['modifyExercise']) or isset($_GET['NewExercise'])) {
                                     <input class='btn btn-sm btn-outline-primary rounded-pill h-30px' type='button' onClick=\"move('assign_box','assignee_box')\" value='   &gt;&gt;   ' /><br /><input class='btn btn-outline-primary btn-sm rounded-pill h-30px mt-2' type='button' onClick=\"move('assignee_box','assign_box')\" value='   &lt;&lt;   ' />
                                   </td>
                                   <td width='40%'>
-                                    <select class='form-select h-100' id='assignee_box' name='ingroup[]' size='10' multiple>
+                                    <select class='form-select h-100 rounded-0' id='assignee_box' name='ingroup[]' size='10' multiple>
                                     ".((isset($assignee_options)) ? $assignee_options : '')."
                                     </select>
                                   </td>
@@ -702,7 +713,7 @@ if (isset($_GET['modifyExercise']) or isset($_GET['NewExercise'])) {
     $tool_content .= "
     <div class='col-12 mb-3'>
         <div class='panel panel-default'>
-            <div class='panel-heading collapsed' data-bs-toggle='collapse' href='#exerciseInfoPanel' aria-expanded='false' aria-controls='#exerciseInfoPanel' style='cursor: pointer'>
+            <div class='panel-heading collapsed bgTheme' data-bs-toggle='collapse' href='#exerciseInfoPanel' aria-expanded='false' aria-controls='#exerciseInfoPanel' style='cursor: pointer'>
                 <span class='fa fa-chevron-right fa-fw' id='exerciseInfoPanelIndicator'></span> " . q($exerciseTitle) . "
             </div>
             <div class='panel-body collapse' id='exerciseInfoPanel'>

@@ -112,7 +112,7 @@ jQuery(document).ready(function() {
       });
       $('#portfolio_lessons_filter label').prepend('<span class=\"sr-only\">$langSearch</span>')
     },
-    'dom': '<\"all_courses\">frtip',
+    'dom': '<\"all_courses ps-md-0\">frtip',
     'oLanguage': {
            'sLengthMenu':   '$langDisplay _MENU_ $langResults2',
            'sZeroRecords':  '".$langNoResult."',
@@ -130,7 +130,7 @@ jQuery(document).ready(function() {
            }
        }
   });
- // $('div.all_courses').html('<a class=\"btn cancelAdminBtn\" href=\"{$urlServer}main/my_courses.php\">$langAllCourses <span class=\"fa fa-arrow-right\"></span></a>');
+ $('div.all_courses').html('<div class=\"d-flex justify-content-md-start justify-content-center flex-wrap\"><a class=\"btn submitAdminBtn mb-3 me-2\" href=\"{$urlAppend}modules/auth/courses.php\">$langRegCourses</a><a id=\"btn_create_course\" class=\"btn submitAdminBtn btn_create_course\" href=\"{$urlAppend}modules/create_course/create_course.php\">$langCourseCreate</a></div>');
   jQuery('.panel_title').click(function()
   {
     var mypanel = $(this).next();
@@ -193,6 +193,7 @@ $data['user_announcements'] = $user_announcements;
 $data['portfolio_page_main_widgets'] = '';
 $portfolio_page_main = new WidgetArea(PORTFOLIO_PAGE_MAIN);
 
+
 foreach ($portfolio_page_main->getUserAndAdminWidgets($uid) as $key => $widget) {
     $data['portfolio_page_main_widgets'] .= $widget->run($key);
 }
@@ -225,7 +226,7 @@ $data['user_messages'] = $user_messages;
 $cources = getUserCoursesPic($uid);
 $data['cources'] = $cources;
 
-$items_per_page = 4;
+$items_per_page = 6;
 $data['items_per_page'] = $items_per_page;
 
 $cource_pages = ceil(count($cources)/$items_per_page);

@@ -81,11 +81,11 @@ if ($_POST && isset($_POST['questionScore'])) {
                     SET total_score = total_score + ?f WHERE eurid = ?d",
                     $data['questionScore'], $data['eurId']);
             }
-            Session::flash('message',$langUpdateSuccess); 
+            Session::flash('message',$langUpdateSuccess);
             Session::flash('alert-class', 'alert-success');
         }
     } else {
-        Session::flash('message',$langUpdateFailure); 
+        Session::flash('message',$langUpdateFailure);
         Session::flash('alert-class', 'alert-warning');
     }
 }
@@ -120,7 +120,7 @@ if (isset($_GET['exerciseId'])) {
     }
     else {
          redirect_to_home_page('modules/exercise/results_by_question.php?course='.$course_code.'&exerciseId='.$exerciseIdIndirect);
-         Session::flash('message',$langUpdateFailure); 
+         Session::flash('message',$langUpdateFailure);
          Session::flash('alert-class', 'alert-warning');
     }
 }
@@ -142,12 +142,12 @@ $TotalExercisesUngraded = Database::get()->querySingle("SELECT COUNT(eurid) AS u
        ." WHERE eid = ?d AND attempt_status=2 "
        . "GROUP BY all_answers.answers", $exerciseId, $exerciseId);
 
-$tool_content .= "<div class='panel panel-primary'>
-                <div class='panel-heading'>
-                  <div class='panel-title'>" .$langQuestionCorrectionTitle . "</div>
+$tool_content .= "<div class='card panelCard px-lg-4 py-lg-3'>
+                <div class='card-header border-0 bg-white d-flex justify-content-between align-items-center'>
+                  <div class='text-uppercase normalColorBlueText TextBold fs-6'>" .$langQuestionCorrectionTitle . "</div>
                   <h5>" . $langQuestionCorrectionTitle2 . $TotalExercisesUngraded->ungraded_answers . $langUngradedAnswers . "</h5>
                 </div>
-                <div class='panel-body'>";
+                <div class='card-body'>";
 
 // for each question
 if (count($exercise_question_ids) > 0) {
@@ -183,7 +183,7 @@ if (count($exercise_question_ids) > 0) {
         $tool_content .= "<br>
             <table class='table-default'>
             <tr>
-                <td class='text-end'><b>$langYourTotalScore: <span id='total_score'>$exercise_user_record->total_score</span> / $exercise_user_record->total_weighting</b></td>
+                <td class='text-end'><b>$langTotalScore: <span id='total_score'>$exercise_user_record->total_score</span> / $exercise_user_record->total_weighting</b></td>
             </tr>
             </table>";
 

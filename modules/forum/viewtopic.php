@@ -113,7 +113,7 @@ $res_type = isset($_GET['res_type']);
 if (isset($_GET['get'])) {
     if (!send_forum_post_file($_GET['get'])) {
         //Session::Messages($langFileNotFound, 'alert-danger');
-        Session::flash('message',$langFileNotFound); 
+        Session::flash('message',$langFileNotFound);
         Session::flash('alert-class', 'alert-danger');
     }
 }
@@ -192,7 +192,7 @@ if (isset($_GET['delete']) && isset($post_id) && $is_editor) {
     Database::get()->query("DELETE FROM abuse_report WHERE rid = ?d AND rtype = ?s", $post_id, 'forum_post');
     // remove forum post attachment (if any)
     $fp = Database::get()->querySingle("SELECT topic_filepath FROM forum_post WHERE id = ?d", $post_id);
-    if ($fp) {
+    if (!empty($fp->topic_filepath)) {
         unlink("$webDir/courses/$course_code/forum/$fp->topic_filepath");
     }
     // remove forum post entries
@@ -632,17 +632,17 @@ function post_content($myrow, $user_stats, $topic_subject, $topic_locked, $offse
         } else {
             $reply_url = "reply.php?course=$course_code&amp;topic=$topic&amp;forum=$forum&amp;parent_post=$myrow->id";
         }
-        $reply_button = "<a class='btn submitAdminBtn reply-post-btn' style='margin-right: 15px;' href='$reply_url'>$langReply</a>";
+        $reply_button = "<a class='btn submitAdminBtn reply-post-btn' href='$reply_url'>$langReply</a>";
     } else {
         $reply_button = '';
     }
 
     if ($count > 1) { // for all posts except first
-        $content .= "<div id='$myrow->id' class='post-message panel panel-default col-sm-offset-$offset mt-3'>";
-        $content .= "<div class='panel-heading'><div class='panel-title'>$langMsgRe " . q($topic_subject);
+        $content .= "<div id='$myrow->id' class='post-message card panelCard col-sm-offset-$offset mt-3'>";
+        $content .= "<div class='card-header bg-light'><div class='panel-title'>$langMsgRe " . q($topic_subject);
     } else {
-        $content .= "<div id='$myrow->id' class='parent-post-message panel panel-primary mt-3'>";
-        $content .= "<div class='panel-heading'><div class='panel-title'>". q($topic_subject);
+        $content .= "<div id='$myrow->id' class='parent-post-message card panelCard mt-3'>";
+        $content .= "<div class='card-header bgNormalBlueText'><div class='panel-title text-white'>". q($topic_subject);
     }
 
     if ($is_editor) {
@@ -654,7 +654,7 @@ function post_content($myrow, $user_stats, $topic_subject, $topic_locked, $offse
                                 "data-bs-original-title='$langModify' data-bs-placement='bottom'></span></a>&nbsp;" .
                     "<a class='delete-btn' href='../forum/viewtopic.php?course=$course_code&amp;post_id=" . $myrow->id .
                         "&amp;topic=$topic&amp;forum=$forum&amp;delete=on'>" .
-                            "<span class='fa fa-times text-white' title='$langDelete' data-bs-toggle='tooltip' " .
+                            "<span class='fa fa-times text-danger' title='$langDelete' data-bs-toggle='tooltip' " .
                             "data-bs-original-title='$langDelete' data-bs-placement='bottom'></span></a>
                 </span>";
     }
@@ -671,15 +671,14 @@ function post_content($myrow, $user_stats, $topic_subject, $topic_locked, $offse
             </div>
         </div>";
         if ($rate_str or $parent_post_link or $reply_button) {
-            $content .= "<div class='panel-body'>";
+            $content .= "<div class='card-body'>";
         }else{
-            $content .= "<div class='panel-body'>";
+            $content .= "<div class='card-body'>";
         }
-        $content .= "
-        
+        $content .= "        
             <div class='row'>
                 <div class='col-sm-1 col-2'>" .
-                    profile_image($myrow->poster_id, '40px', 'img-rounded-corners margin-bottom-thin') . "
+                    profile_image($myrow->poster_id, IMAGESIZE_SMALL, 'img-rounded-corners margin-bottom-thin') . "
                 </div>
                 <div class='col-sm-11 col-10'>
                     <div class='forum-post-header'>
@@ -711,13 +710,13 @@ function post_content($myrow, $user_stats, $topic_subject, $topic_locked, $offse
         </div>";
     if ($rate_str or $parent_post_link or $reply_button) {
         $content .= "
-        <div class='panel-footer' style='border-top: solid 1px #e8e8e8;'>
+        <div class='card-footer bg-white border-0'>
             <div class='row'>
-                <div class='col-12'>
-                    <small>
-                        <span class='pull-left' style='margin-left: 15px;'>$rate_str $parent_post_link</span>
-                        <span class='pull-right'>$reply_button</span>
-                    </small>
+                <div class='col-12 d-flex justify-content-between align-items-center'>
+                   
+                        <span>$rate_str $parent_post_link</span>
+                        <span>$reply_button</span>
+                    
                 </div>
             </div>
         </div>";

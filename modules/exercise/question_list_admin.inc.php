@@ -445,7 +445,7 @@ $tool_content .= action_bar(array(
 if ($nbrQuestions) {
     $info_random_text = '';
     if ($randomQuestions > 0) {
-        $info_random_text = "<small><span class='help-block'>$langShow $randomQuestions $langFromRandomQuestions</span></small>";
+        $info_random_text = "<small><span class='help-block'>$langViewShow $randomQuestions $langFromRandomQuestions</span></small>";
     }
 
     $tool_content .= "<div class='col-12'><div id='RandomizationForm' class='form-wrapper form-edit rounded'>
@@ -513,8 +513,10 @@ if ($nbrQuestions) {
         $question_difficulty_legend = $objQuestionTmp->selectDifficultyIcon($objQuestionTmp->selectDifficulty());
         $question_category_legend = $objQuestionTmp->selectCategoryName($objQuestionTmp->selectCategory());
         $addon = "&amp;htopic=" . $aType;
-        $editUrl = "$_SERVER[SCRIPT_NAME]?course=$course_code&amp;exerciseId=$exerciseId&amp;modifyAnswers=$id$addon";
-        $deleteUrl = "?course=$course_code&amp;exerciseId=$exerciseId&amp;deleteQuestion=$id";
+        if (!is_array($id)) {
+            $editUrl = "$_SERVER[SCRIPT_NAME]?course=$course_code&amp;exerciseId=$exerciseId&amp;modifyAnswers=$id$addon";
+            $deleteUrl = "?course=$course_code&amp;exerciseId=$exerciseId&amp;deleteQuestion=$id";
+        }
 
         if (is_array($id)) {
             if ($id['criteria'] == 'difficulty') {

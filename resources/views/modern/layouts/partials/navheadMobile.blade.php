@@ -3,10 +3,11 @@
         <div class='col-12 d-flex justify-content-center'>
 
             @if(!get_config('hide_login_link'))
-                <a class='d-flex justify-content-center align-items-center' type="button" href="{{ $urlServer }}"><img class="eclass-nav-icon ms-2 ps-2 pe-2" src="{{$logo_img_small}}"></a>
+                <a class='d-flex justify-content-center align-items-center' type="button" href="{{ $urlServer }}"><img class="eclass-nav-icon ms-2 ps-2 pe-2 bg-transparent text-white" src="{{$logo_img_small}}"></a>
             @endif
 
             <div class="btn-group w-100" role="group" aria-label="Basic example">
+                <a type='button' class="btn btn-transparent text-white d-flex justify-content-center align-items-center" href="{{ $urlServer }}"><i class="fas fa-home"></i></a>
                 @if (!isset($_SESSION['uid']))
                     <a type="button" class="btn btn-transparent text-white @if(get_config('registration_link')=='hide') d-none @endif d-flex justify-content-center align-items-center" href="{{ $urlAppend }}modules/auth/registration.php"><i class="fas fa-pen-nib pen-nib-navhead"></i></a>
                 @endif
@@ -15,23 +16,24 @@
                     <a type='button' class="btn btn-transparent text-white d-flex justify-content-center align-items-center" href="{{ $urlAppend }}info/faq.php"><i class="fa fa-question-circle fa-fw text-white"></i></a>
                 @endif
                 @if(get_config('enable_search'))
-                    <a type="button" class='btn btn-transparent text-white d-flex justify-content-center align-items-center' href="{{ $urlAppend }}modules/search/{{ $search_action }}"><i class="fa fa-search"></i></button>
+                    <a type="button" class='btn btn-transparent text-white d-flex justify-content-center align-items-center' href="{{ $urlAppend }}modules/search/{{ $search_action }}"><i class="fa fa-search"></i></a>
                 @endif
 
-                
-                {!! lang_selections_Mobile() !!}
+                @if (!isset($_SESSION['uid']))
+                    {!! lang_selections_Mobile() !!}
+                @endif
 
 
                 @if(isset($_SESSION['uid']))
 
-                        <button class="btn btn-transparent dropdown-toogle d-flex justify-content-center align-items-center" type="button"
+                        <button class="btn btn-transparent dropdown-toogle d-flex justify-content-end align-items-center" type="button"
                                 id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fa fa-user orangeText"></i>
+                                <img class="user-icon-filename mt-0 me-2" src="{{ user_icon($_SESSION['uid'], IMAGESIZE_LARGE) }}" alt="{{ $uname }}">
                         </button>
 
                         <ul class="m-0 p-0 dropdown-menu dropdown-menu-end dropdown_menu_user bg-body border-0 shadow-lg" aria-labelledby="dropdownMenuButton1">
                             <li>
-                                <a class='list-group-item pe-none bg-light text-center'><i class="fa fa-user lightBlueText mt-1 pe-2"></i> <span class='lightBlueText fs-6 fw-bold'>{{ $_SESSION['uname'] }}</span></a>
+                                <a class='list-group-item pe-none bg-light text-center'><span class='normalBlueText fs-6 fw-bold'>{{ $_SESSION['uname'] }}</span></a>
                             </li>
                             @if ((isset($is_admin) and $is_admin) or
                                 (isset($is_power_user) and $is_power_user) or

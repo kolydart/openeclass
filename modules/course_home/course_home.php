@@ -62,8 +62,13 @@ add_units_navigation(TRUE);
 
 load_js('tools.js');
 
-$data['course_info'] = $course_info = Database::get()->querySingle("SELECT title, keywords, visible, prof_names, public_code, course_license, finish_date,
-                                               view_type, start_date, finish_date, description, home_layout, course_image, password
+// $data['course_info'] = $course_info = Database::get()->querySingle("SELECT title, keywords, visible, prof_names, public_code, course_license, finish_date,
+//                                                view_type, start_date, finish_date, description, home_layout, course_image, password
+//                                           FROM course WHERE id = ?d", $course_id);
+
+// INCOMING CHANGE AFTER install_db
+$data['course_info'] = $course_info = Database::get()->querySingle("SELECT title, keywords, visible, prof_names, public_code, course_license,
+                                               view_type, start_date, end_date, description, home_layout, course_image, flipped_flag, password
                                           FROM course WHERE id = ?d", $course_id);
 
 // Handle unit reordering
@@ -220,7 +225,7 @@ if (isset($uid) and isset($_SESSION['status']) and $_SESSION['status'] != USER_G
                 ));
             }
         }
-        
+
         if (get_user_email_notification($uid, $course_id)) {
             $email_notify_icon = "<a id='email_notification' href='{$urlAppend}modules/course_home/course_home.php?course=$course_code&amp;email_un=1' class='float-end ps-2 mt-2'><span class='fa fa-envelope fa-fw' data-bs-toggle='tooltip' data-bs-placement='bottom' title='" . q($langUserEmailNotification) . "'></span></a>";
         } else {
@@ -351,11 +356,17 @@ if ($is_editor) {
 }
 
 $data['departments'] = $course->getDepartmentIds($course_id);
-
-$data['numUsers'] = Database::get()->querySingle("SELECT COUNT(user_id) AS numUsers
+if ($is_course_admin) {
+    $data['numUsers'] = Database::get()->querySingle("SELECT COUNT(user_id) AS numUsers
                 FROM course_user
                 WHERE course_id = ?d", $course_id)->numUsers;
 
+} else if (setting_get(SETTING_USERS_LIST_ACCESS, $course_id) == 1) {
+    $data['numUsers'] = Database::get()->querySingle("SELECT COUNT(*) AS numUsers FROM course_user, user
+                WHERE `user`.`id` = `course_user`.`user_id`
+                AND user.expires_at > " . DBHelper::timeAfter() . "
+                AND `course_user`.`course_id` = ?d", $course_id)->numUsers;
+}
 
 //set the lang var for lessons visibility status
 switch ($visible) {
@@ -427,7 +438,6 @@ if (isset($level) && !empty($level)) {
     };
 
     $(document).ready(function() {
-
         dialog = $(\"<div class='modal fade' tabindex='-1' role='dialog' aria-labelledby='modal-label' aria-hidden='true'><div class='modal-dialog modal-lg'><div class='modal-content'><div class='modal-header'><button type='button' class='close' data-bs-dismiss='modal'><span aria-hidden='true'>&times;</span><span class='sr-only'>{$langCancel}</span></button><div class='modal-title h4' id='modal-label'>{$langCourseMetadata}</div></div><div class='modal-body'>body</div></div></div></div>\");
     });
 
@@ -572,7 +582,7 @@ if ($total_cunits > 0) {
             if ($not_shown) {
                 $cunits_content .= q($cu->title) ;
             } else {
-                $cunits_content .= "<a class='$class_vis' href='{$urlServer}modules/units/index.php?course=$course_code&amp;id=$cu->id'>" . q($cu->title) . "</a>";
+                $cunits_content .= "<a class=' fs-6 TextSemiBold $class_vis' href='{$urlServer}modules/units/index.php?course=$course_code&amp;id=$cu->id'>" . q($cu->title) . "</a>";
             }
             $cunits_content .= "<br><small><span class='help-block'>";
             if (!(is_null($cu->start_week))) {
@@ -846,7 +856,7 @@ function course_announcements() {
                 $ann_url = $urlAppend . "modules/announcements/index.php?course=$course_code&amp;an_id=" . $ann->id;
                 $ann_date = format_locale_date(strtotime($ann->date));
                 $ann_content .= "<li class='list-group-item ps-0 pe-0'>
-                                    <span class='item-wholeline'><div class='text-title'><a class='TextSemiBold' href='$ann_url'>" . q(ellipsize($ann->title, 60)) ."</a></div>$ann_date</span>
+                                    <span class='item-wholeline'><div class='text-title'><a style='font-size:15px;' class='TextSemiBold' href='$ann_url'>" . q(ellipsize($ann->title, 60)) ."</a></div>$ann_date</span>
                                 </li>";
                 }
                 $counter_ann++;

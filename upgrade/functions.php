@@ -1,10 +1,10 @@
 <?php
 
 /* ========================================================================
- * Open eClass 3.0
+ * Open eClass 3.14
  * E-learning and Course Management System
  * ========================================================================
- * Copyright 2003-2014  Greek Universities Network - GUnet
+ * Copyright 2003-2023  Greek Universities Network - GUnet
  * A full copyright notice can be read in "/info/copyright.txt".
  * For a full list of contributors, see "credits.txt".
  *
@@ -24,65 +24,6 @@
  */
 
 
-/**
- * @brief function to update a field in a table
- * @param $table
- * @param $field
- * @param $field_name
- * @param $id_col
- * @param $id
- */
-function update_field($table, $field, $field_name, $id_col, $id) {
-    $id = quote($id);
-    $sql = "UPDATE `$table` SET `$field` = '$field_name' WHERE `$id_col` = $id;";
-    Database::get()->query($sql);
-}
-
-/**
- * @brief add field $field to table $table of current database, if it doesn't already exist
- * @param $table
- * @param $field
- * @param $type
- */
-function add_field($table, $field, $type) {
-    global $langToTable, $langAddField, $BAD;
-
-    $fields = Database::get()->queryArray("SHOW COLUMNS FROM $table LIKE '$field'");
-    if (count($fields) == 0) {
-        if (!Database::get()->query("ALTER TABLE `$table` ADD `$field` $type")) {
-            $retString = "$langAddField <b>$field</b> $langToTable <b>$table</b>: ";
-            $retString .= " $BAD<br>";
-            Debug::message($retString, Debug::ERROR);
-        }
-    }
-}
-
-function add_field_after_field($table, $field, $after_field, $type) {
-    global $langToTable, $langAddField, $langAfterField, $BAD;
-
-    $fields = Database::get()->queryArray("SHOW COLUMNS FROM $table LIKE '$field'");
-    if (count($fields) == 0) {
-        if (!Database::get()->query("ALTER TABLE `$table` ADD COLUMN `$field` $type AFTER `$after_field`")) {
-            $retString = "$langAddField <b>$field</b> $langAfterField <b>$after_field</b> $langToTable <b>$table</b>: ";
-            $retString .= " $BAD<br>";
-            Debug::message($retString, Debug::ERROR);
-        }
-    }
-}
-
-function rename_field($table, $field, $new_field, $type) {
-    global $langToA, $langRenameField, $langToTable, $BAD;
-
-    $fields = Database::get()->queryArray("SHOW COLUMNS FROM $table LIKE '$new_field'");
-    if (count($fields) == 0) {
-        if (!Database::get()->query("ALTER TABLE `$table` CHANGE  `$field` `$new_field` $type")) {
-            $retString = "$langRenameField <b>$field</b> $langToA <b>$new_field</b> $langToTable <b>$table</b>: ";
-            $retString .= " $BAD<br>";
-            Debug::message($retString, Debug::ERROR);
-        }
-    }
-}
-
 function delete_field($table, $field) {
     global $langOfTable, $langDeleteField, $BAD;
 
@@ -99,25 +40,6 @@ function delete_table($table) {
 
     if (!Database::get()->query("DROP TABLE IF EXISTS $table")) {
         $retString = "$langDeleteTable <b>$table</b>: ";
-        $retString .= " $BAD<br>";
-        Debug::message($retString, Debug::ERROR);
-    }
-}
-
-function merge_tables($table_destination, $table_source, $fields_destination, $fields_source) {
-    global $langMergeTables, $BAD;
-
-    $query = "INSERT INTO $table_destination (";
-    foreach ($fields_destination as $val) {
-        $query.=$val . ",";
-    }
-    $query = substr($query, 0, -1) . ") SELECT ";
-    foreach ($fields_source as $val) {
-        $query.=$val . ",";
-    }
-    $query = substr($query, 0, -1) . " FROM " . $table_source;
-    if (!Database::get()->query($query)) {
-        $retString = " $langMergeTables <b>$table_destination</b>,<b>$table_source</b>";
         $retString .= " $BAD<br>";
         Debug::message($retString, Debug::ERROR);
     }
@@ -2463,10 +2385,17 @@ function upgrade_to_3_14($tbl_options) : void {
         Database::get()->query("ALTER TABLE `tc_servers` CHANGE `hostname` `hostname` varchar(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL AFTER `type`");
         Database::get()->query("ALTER TABLE `tc_servers` CHANGE `type` `type` varchar(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL AFTER `id`");
     }
+    if (DBHelper::fieldExists('tc_session', 'meeting_id')) {
+        Database::get()->query("ALTER TABLE `tc_session` CHANGE `meeting_id` `meeting_id` varchar(255) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL");
+    }
 
     // question feedback
     if (!DBHelper::fieldExists('exercise_question', 'feedback')) {
         Database::get()->query("ALTER TABLE exercise_question ADD `feedback` TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci AFTER description");
+    }
+    // exercise end message (aka feedback)
+    if (!DBHelper::fieldExists('exercise', 'general_feedback')) {
+        Database::get()->query("ALTER TABLE `exercise` ADD `general_feedback` TEXT CHARACTER SET utf8mb4 COLLATE 'utf8mb4_unicode_520_ci' NULL");
     }
 
     // clean up gradebook -- delete multiple tuples (gradebook_activity_id, uid) in `gradebook_book` table (if any)
@@ -2496,6 +2425,72 @@ function upgrade_to_3_14($tbl_options) : void {
         Database::get()->query("ALTER TABLE lp_user_module_progress ADD `accessed` datetime DEFAULT NULL AFTER started");
     }
 
+    if (!DBHelper::tableExists('page')) {
+        Database::get()->query("CREATE TABLE `page` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `course_id` int(11) DEFAULT NULL,
+            `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+            `path` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+            `visible` tinyint(4) DEFAULT 0,
+            PRIMARY KEY (`id`),
+            KEY `course_id_index` (`course_id`)) $tbl_options");
+    }
+
+    if (!DBHelper::fieldExists('user','pic_public')) {
+        Database::get()->query("ALTER TABLE user ADD pic_public TINYINT(1) NOT NULL DEFAULT 0 AFTER am_public");
+    }
+
+    if (DBHelper::fieldExists('monthly_summary', 'logins')) {
+        // convert `month` field from `varchar` to `date`
+        Database::get()->query("UPDATE monthly_summary SET month = STR_TO_DATE(CONCAT('01 ', month),'%d %m %Y')");
+        Database::get()->query("ALTER TABLE `monthly_summary` CHANGE `month` `month` DATE NOT NULL AFTER `id`");
+        // remove `login` field (`login` field is in table `loginout_summary`)
+        delete_field('monthly_summary', 'logins');
+    }
+
+    if (DBHelper::fieldExists('course', 'finish_date')) {
+        Database::get()->query("UPDATE course SET finish_date=NULL");
+        Database::get()->query("ALTER TABLE course CHANGE finish_date end_date DATE DEFAULT NULL");
+    }
+
+    if (!DBHelper::fieldExists('course', 'updated')) {
+        Database::get()->querySingle("ALTER TABLE `course`ADD `updated` datetime NULL AFTER `created`");
+    }
+
+    if (!DBHelper::fieldExists('group_properties', 'public_users_list')) {
+        Database::get()->query("ALTER TABLE `group_properties`ADD `public_users_list` tinyint NOT NULL DEFAULT '1'");
+    }
+
+    if (!DBHelper::fieldExists('exercise', 'general_feedback')) {
+        Database::get()->query("ALTER TABLE `exercise` ADD `general_feedback` TEXT CHARACTER SET utf8mb4 COLLATE 'utf8mb4_unicode_520_ci' NULL");
+    }
+
+    // api token
+    if (!DBHelper::tableExists('api_token')) {
+        Database::get()->querySingle("CREATE TABLE `api_token` (
+            `id` smallint NOT NULL AUTO_INCREMENT,
+            `token` text CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+            `name` text CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+            `comments` text CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+            `ip` varchar(45) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+            `enabled` tinyint NOT NULL,
+            `created` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `updated` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `expired` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (`id`)) $tbl_options");
+    }
+
+    // api token specific fields
+    if (!DBHelper::fieldExists('api_token', 'created')) {
+        Database::get()->query("ALTER TABLE `api_token` ADD `created` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP");
+    }
+    if (!DBHelper::fieldExists('api_token', 'updated')) {
+        Database::get()->query("ALTER TABLE `api_token` ADD `updated` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP");
+    }
+    if (!DBHelper::fieldExists('api_token', 'expired')) {
+        Database::get()->query("ALTER TABLE `api_token` ADD `expired` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP");
+    }
+
 }
 
 /**
@@ -2504,6 +2499,11 @@ function upgrade_to_3_14($tbl_options) : void {
  * @return void
  */
 function upgrade_to_4_0($tbl_options): void {
+
+    // question feedback
+    if (!DBHelper::fieldExists('exercise_question', 'feedback')) {
+        Database::get()->query("ALTER TABLE exercise_question ADD `feedback` TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci AFTER description");
+    }
 
     // widgets
     if (!DBHelper::tableExists('widget')) {
@@ -2628,6 +2628,30 @@ function upgrade_to_4_0($tbl_options): void {
     $current_theme = get_config('theme');
     if (!$current_theme or $current_theme == 'default') {
         set_config('theme', 'modern');
+    }
+
+    if (!DBHelper::fieldExists('group_properties', 'public_users_list')) {
+        Database::get()->query("ALTER TABLE `group_properties`ADD `public_users_list` tinyint NOT NULL DEFAULT '1'");
+    }
+
+    if (!DBHelper::fieldExists('user','pic_public')) {
+        Database::get()->query("ALTER TABLE user ADD pic_public TINYINT(1) NOT NULL DEFAULT 0 AFTER am_public");
+    }
+
+    if (!DBHelper::fieldExists('exercise', 'general_feedback')) {
+        Database::get()->query("ALTER TABLE `exercise` ADD `general_feedback` TEXT CHARACTER SET utf8mb4 COLLATE 'utf8mb4_unicode_520_ci' NULL");
+    }
+
+    if (!DBHelper::fieldExists('personal_calendar', 'end')) {
+        Database::get()->query("ALTER TABLE `personal_calendar` ADD `end` DATETIME NOT NULL");
+    }
+
+    if (!DBHelper::fieldExists('admin_calendar', 'end')) {
+        Database::get()->query("ALTER TABLE `admin_calendar` ADD `end` DATETIME NOT NULL");
+    }
+
+    if (!DBHelper::fieldExists('agenda', 'end')) {
+        Database::get()->query("ALTER TABLE `agenda` ADD `end` DATETIME NOT NULL");
     }
 }
 
@@ -3144,6 +3168,23 @@ function finalize_upgrade(): void
 
     set_config('version', ECLASS_VERSION);
     set_config('upgrade_begin', '');
+}
+
+
+/**
+  * @brief Rename user profile image files to unpredictable names
+  */
+function encode_user_profile_pics(): void
+{
+    Database::get()->queryFunc('SELECT id FROM user WHERE has_icon = 1',
+        function ($user) {
+            $base = "courses/userimg/{$user->id}_";
+            if (file_exists($base . IMAGESIZE_LARGE . '.jpg')) {
+                $hash = profile_image_hash($user->id);
+                rename($base . IMAGESIZE_LARGE . '.jpg', $base . $hash . '_' . IMAGESIZE_LARGE . '.jpg');
+                rename($base . IMAGESIZE_SMALL . '.jpg', $base . $hash . '_' . IMAGESIZE_SMALL . '.jpg');
+            }
+        });
 }
 
 

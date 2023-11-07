@@ -6,6 +6,7 @@
 
 require_once 'include/lib/mediaresource.factory.php';
 require_once 'include/lib/multimediahelper.class.php';
+require_once 'modules/group/group_functions.php';
 
 /**
  * @brief  Process resource actions
@@ -832,12 +833,6 @@ function show_videocat($title, $comments, $resource_id, $videolinkcat_id, $visib
 
 /**
  * @brief display resource assignment (aka work)
- * @global type $id
- * @global type $urlServer
- * @global type $is_editor
- * @global type $langWasDeleted
- * @global type $course_id
- * @global type $course_code
  * @param type $title
  * @param type $comments
  * @param type $resource_id
@@ -846,11 +841,29 @@ function show_videocat($title, $comments, $resource_id, $videolinkcat_id, $visib
  * @return string
  */
 function show_work($title, $comments, $resource_id, $work_id, $visibility, $act_name) {
-    global $id, $urlServer, $is_editor,
-    $langWasDeleted, $course_id, $course_code, $langPassCode;
+
+    global $id, $urlServer, $is_editor, $uid, $m,
+            $langWasDeleted, $course_id, $course_code, $langPassCode;
 
     $title = q($title);
-    $work = Database::get()->querySingle("SELECT * FROM assignment WHERE course_id = ?d AND id = ?d", $course_id, $work_id);
+    if ($is_editor) {
+        $work = Database::get()->querySingle("SELECT * FROM assignment WHERE course_id = ?d AND id = ?d", $course_id, $work_id);
+    } else {
+        $gids = user_group_info($uid, $course_id);
+        if (!empty($gids)) {
+            $gids_sql_ready = implode(',',array_keys($gids));
+        } else {
+            $gids_sql_ready = "''";
+        }
+        $work = Database::get()->querySingle("SELECT * FROM assignment WHERE course_id = ?d AND id = ?d 
+                                 AND
+                                (assign_to_specific = 0 OR id IN
+                                    (SELECT assignment_id FROM assignment_to_specific WHERE user_id = ?d
+                                        UNION
+                                    SELECT assignment_id FROM assignment_to_specific WHERE group_id != 0 AND group_id IN ($gids_sql_ready))
+                                )", $course_id, $work_id, $uid);
+    }
+
     if (!$work) { // check if it was deleted
         if (!$is_editor) {
             return '';
@@ -859,6 +872,15 @@ function show_work($title, $comments, $resource_id, $work_id, $visibility, $act_
             $exlink = "<span class='not_visible'>$title ($langWasDeleted)</span>";
         }
     } else {
+        $assign_to_users_message = '';
+        if ($is_editor) {
+            if ($work->assign_to_specific == 1) {
+                $assign_to_users_message = "<small class='help-block'>$m[WorkAssignTo]: $m[WorkToUser]</small>";
+            } else if ($work->assign_to_specific == 2) {
+                $assign_to_users_message = "<small class='help-block'>$m[WorkAssignTo]: $m[WorkToGroup]</small>";
+            }
+        }
+
         if ($work->password_lock) {
             $lock_description = "<ul>";
             $lock_description .= "<li>$langPassCode</li>";
@@ -884,19 +906,13 @@ function show_work($title, $comments, $resource_id, $work_id, $visibility, $act_
         <tr data-id='$resource_id'>
           <td width='1'>$imagelink</td>
           <td class='text-start' width='1'>$act_name</td>
-          <td>$exlink $comment_box</td>" .
+          <td>$exlink $comment_box $assign_to_users_message</td>" .
             actions('lp', $resource_id, $visibility) . '
         </tr>';
 }
 
 /**
  * @brief display resource exercise
- * @global type $id
- * @global type $urlServer
- * @global type $is_editor
- * @global type $langWasDeleted
- * @global type $course_id
- * @global type $course_code
  * @param type $title
  * @param type $comments
  * @param type $resource_id
@@ -906,10 +922,30 @@ function show_work($title, $comments, $resource_id, $work_id, $visibility, $act_
  */
 function show_exercise($title, $comments, $resource_id, $exercise_id, $visibility, $act_name) {
     global $id, $urlServer, $is_editor, $langWasDeleted, $course_id, $course_code, $langPassCode, $uid,
-        $langAttemptActive, $langAttemptPausedS;
+        $langAttemptActive, $langAttemptPausedS, $m;
 
     $title = q($title);
-    $exercise = Database::get()->querySingle("SELECT * FROM exercise WHERE course_id = ?d AND id = ?d", $course_id, $exercise_id);
+
+    if ($is_editor) {
+        $exercise = Database::get()->querySingle("SELECT * FROM exercise WHERE course_id = ?d AND id = ?d", $course_id, $exercise_id);
+    } else {
+        $gids_sql_ready = "''";
+        if ($uid > 0) {
+            $gids = user_group_info($uid, $course_id);
+            if (!empty($gids)) {
+                $gids_sql_ready = implode("','", array_keys($gids));
+            }
+        }
+        $exercise = Database::get()->querySingle("SELECT * FROM exercise WHERE course_id = ?d AND id = ?d 
+                       AND
+                          (assign_to_specific = '0' OR
+                           (assign_to_specific != '0' AND id IN (
+                              SELECT exercise_id FROM exercise_to_specific WHERE user_id = ?d
+                                UNION
+                               SELECT exercise_id FROM exercise_to_specific WHERE group_id IN ('$gids_sql_ready'))))",
+                    $course_id, $exercise_id, $uid);
+    }
+
     if (!$exercise) { // check if it was deleted
         if (!$is_editor) {
             return '';
@@ -928,6 +964,15 @@ function show_exercise($title, $comments, $resource_id, $exercise_id, $visibilit
             enable_password_bootbox();
             $link_class = 'password_protected';
             $exclamation_icon = "&nbsp;&nbsp;<span class='fa fa-exclamation-triangle space-after-icon' data-toggle='tooltip' data-placement='right' data-html='true' data-title='$langPassCode'></span>";
+        }
+
+        $assign_to_users_message = '';
+        if ($is_editor) {
+            if ($exercise->assign_to_specific == 1) {
+                $assign_to_users_message = "<small class='help-block'>$m[WorkAssignTo]: $m[WorkToUser]</small>";
+            } else if ($exercise->assign_to_specific == 2) {
+                $assign_to_users_message = "<small class='help-block'>$m[WorkAssignTo]: $m[WorkToGroup]</small>";
+            }
         }
 
         // check if exercise is in "paused" or "running" state
@@ -963,7 +1008,7 @@ function show_exercise($title, $comments, $resource_id, $exercise_id, $visibilit
         } else {
             $link = "<a class='ex_settings $link_class' href='${urlServer}modules/units/view.php?course=$course_code&amp;res_type=exercise&amp;exerciseId=$exercise_id&amp;unit=$id'>";
         }
-        $exlink = $link . "$title</a> $exclamation_icon $pending_label";
+        $exlink = $link . "$title</a> $exclamation_icon $assign_to_users_message $pending_label";
         $imagelink = $link . "</a>" . icon('fa-pencil-square-o'). "";
     }
     $class_vis = ($status == '0' or $status == 'del') ? ' class="not_visible"' : ' ';
@@ -1269,14 +1314,7 @@ function show_ebook($title, $comments, $resource_id, $ebook_id, $visibility, $ac
     global $id, $urlServer, $is_editor,
     $langWasDeleted, $course_code, $langInactiveModule;
 
-    $module_visible = visible_module(MODULE_ID_EBOOK); // checks module visibility
-
-    if (!$module_visible and ! $is_editor) {
-        return '';
-    }
-
-    $class_vis = ($visibility == 0 or ! $module_visible) ?
-            ' class="not_visible"' : ' ';
+    $class_vis = ($visibility == 0) ? ' class="not_visible"' : ' ';
     $title = q($title);
     $r = Database::get()->querySingle("SELECT * FROM ebook WHERE id = ?d", $ebook_id);
     if (!$r) { // check if it was deleted
@@ -1289,9 +1327,6 @@ function show_ebook($title, $comments, $resource_id, $ebook_id, $visibility, $ac
     } else {
         $link = "<a href='${urlServer}modules/ebook/show.php?$course_code/$ebook_id/unit=$id'>";
         $exlink = $link . "$title</a>";
-        if (!$module_visible) {
-            $exlink .= " <i>($langInactiveModule)</i>";
-        }
         $imagelink = $link . "</a>" .icon('fa-book') . "";
     }
 
@@ -1705,7 +1740,7 @@ function actions($res_type, $resource_id, $status, $res_id = false) {
  * @return string
  */
 function edit_res($resource_id) {
-    global $id, $urlServer, $langTitle, $langDescription, $langContents, $langModify, $course_code;
+    global $id, $urlServer, $langTitle, $langDescription, $langContents, $langSubmit, $course_code;
 
     $ru = Database::get()->querySingle("SELECT id, title, comments, type FROM unit_resources WHERE id = ?d", $resource_id);
     $restitle = " value='" . htmlspecialchars($ru->title, ENT_QUOTES) . "'";
@@ -1731,7 +1766,8 @@ function edit_res($resource_id) {
                     <div class='col-sm-12'>" . rich_text_editor('rescomments', 4, 20, $rescomments) . "</div>
                 </div>
                 <div class='col-12 mt-5 d-flex justify-content-center'>
-                    <input class='btn submitAdminBtn' type='submit' name='edit_res_submit' value='$langModify'>
+                    <input class='btn submitAdminBtn' type='submit' name='edit_res_submit' value='$langSubmit'>
+
                 </div>
             </form></div>
         </div>";

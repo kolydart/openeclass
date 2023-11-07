@@ -721,7 +721,7 @@ function which_registration_action($registration_action_id) {
 
 /**
  * Count user groups of the course
- * @param int cid the course id
+ * @param int $cid cid the course id
  * @return int the number of user groups
 */
 function count_course_groups($cid){
@@ -731,17 +731,23 @@ function count_course_groups($cid){
 
 /**
  * Get the sum of hits with their duration for a course
- * @param int cid the course id
- * @param int userid the user id
+ * @param int $cid cid the course id
+ * @param int $userid userid the user id
  * @return array(int, string) an array with the number of visits and their duration formatted as h:mm:ss
 */
 function course_hits($cid, $userid = 0){
-    $r = Database::get()->querySingle("SELECT SUM(hits) hits, SUM(duration) dur FROM actions_daily WHERE course_id=?d", $cid);
     if ($userid > 0) {
-        $r = Database::get()->querySingle("SELECT SUM(hits) hits, SUM(duration) dur FROM actions_daily
-                            WHERE course_id = ?d AND user_id = ?d", $cid, $userid);
+        $r = Database::get()->querySingle("SELECT SUM(hits) hits FROM actions_daily
+                            WHERE course_id = ?d 
+                            AND user_id = ?d
+                            AND module_id != " . MODULE_ID_TC . "
+                            AND module_id != " . MODULE_ID_LP . "", $cid, $userid);
+
+        return $r->hits;
+    } else {
+        $r = Database::get()->querySingle("SELECT SUM(hits) hits, SUM(ABS(duration)) dur FROM actions_daily WHERE course_id=?d", $cid);
+        return array('hits' => $r->hits, 'duration' => user_friendly_seconds($r->dur));
     }
-    return array('hits' => $r->hits, 'duration' => user_friendly_seconds($r->dur));
 }
 
 /**
@@ -757,8 +763,8 @@ function course_visits($cid) {
 }
 
 /**
- * Transform seconds to h:mm:ss
- * @param int seconds the nu,ber of seconds to be shown properly
+ * @brief Transform seconds to h:mm:ss
+ * @param int $seconds the number of seconds to be shown properly
  * @return string a formated time string
 */
 function user_friendly_seconds($seconds){
@@ -774,13 +780,28 @@ function user_friendly_seconds($seconds){
 }
 
 /**
- * Create the panel to show a plot
- * @param string plot_id the id of the id of the div where the plot will be drwan
- * @param string title the caption of the plot
- * @return string a formated element ready to display a plot
+ * @brief get course user registration date
+ * @param $course_id
+ * @param $user_id
+ * @return void
+ */
+function get_course_user_registration($course_id, $user_id) {
+    $q = Database::get()->querySingle("SELECT DATE_FORMAT(DATE(reg_date),'%e-%c-%Y') AS reg_date
+                    FROM course_user
+                    WHERE course_id = ?d AND user_id = ?d ORDER BY reg_date ASC LIMIT 1", $course_id, $user_id);
+    if ($q) {
+        return $q->reg_date;
+    }
+}
+
+
+/**
+ * @brief Create the panel to show a plot
+ * @param string $plot_id the id of the id of the div where the plot will be drawn
+ * @param string $title the caption of the plot
+ * @return string a formatted element ready to display a plot
 */
 function plot_placeholder($plot_id, $title = null){
-    //$p = "<ul class='list-group'>";
     $p = "<div class='panel panel-default'><div class='panel-body'>";
     if(!is_null($title)){
         $p .= "<div class='inner-heading'><span id='{$plot_id}_title' class='TextBold text-uppercase'>"
@@ -795,10 +816,10 @@ function plot_placeholder($plot_id, $title = null){
 
 /**
  * Create the panel and the table structure of a table to be filled with AJAX with data
- * @param string table_id the id of the table in the DOM
- * @param string table_class the class of the table element
- * @param string table_schema the header and footer of the table which also specify the column number of the table
- * @param string title the caption of the table
+ * @param string $table_id table_id the id of the table in the DOM
+ * @param string $table_class table_class the class of the table element
+ * @param string $table_schema table_schema the header and footer of the table which also specify the column number of the table
+ * @param string $title title the caption of the table
  * @return string a formatted element containing the specified table
 */
 function table_placeholder($table_id, $table_class, $table_schema, $title = null){
@@ -827,15 +848,17 @@ function table_placeholder($table_id, $table_class, $table_schema, $title = null
 */
 function user_duration_per_course($u) {
 
-    global $tool_content, $langDurationVisitsPerCourse, $langNotEnrolledToLessons;
+    global $tool_content, $langDurationVisitsPerCourse, $langNotEnrolledToLessons, $langInfoUserDuration, $langTotalDuration;
 
     $totalDuration = 0;
-    $result = Database::get()->queryArray("SELECT SUM(hits) AS cnt, SUM(duration) AS duration, course.code
+    $result = Database::get()->queryArray("SELECT SUM(hits) AS cnt, SUM(ABS(duration)) AS duration, course.code
                                         FROM course
-                                            LEFT JOIN course_user ON course.id = course_user.course_id
-                                            LEFT JOIN actions_daily
-                                                ON actions_daily.user_id = course_user.user_id AND
-                                                   actions_daily.course_id = course_user.course_id
+                                        LEFT JOIN course_user ON course.id = course_user.course_id
+                                        LEFT JOIN actions_daily
+                                        ON actions_daily.user_id = course_user.user_id 
+                                        AND actions_daily.course_id = course_user.course_id
+                                        AND actions_daily.module_id != " . MODULE_ID_TC . "
+                                        AND actions_daily.module_id != " . MODULE_ID_LP . "
                                         WHERE course_user.user_id = ?d
                                         AND course.visible != " . COURSE_INACTIVE . "
                                         GROUP BY course.id
@@ -847,13 +870,20 @@ function user_duration_per_course($u) {
         }
 
     $totalDuration = format_time_duration(0 + $totalDuration, 240);
+
+    $tool_content .= "<div class='text-center mb-3'>
+                        <span class='panel-title'>"  . uid_to_name($_SESSION['uid']) . "</span>
+                        <div style='margin-bottom: 10px;'><strong>$langTotalDuration:</strong> " . $totalDuration . "</div>
+                        <div>$langInfoUserDuration</div>
+                    </div>";
+
     $tool_content .= "
                 <div class='margin-bottom-fat margin-top-fat mb-3'>
                   <div class='col-12'>
                     <ul class='list-group'>
                       <li class='list-group-item disabled bg-primary'>
                         <div class='row'>
-                          <div class='col-sm-12'><b class='text-white'>$langDurationVisitsPerCourse</b></div>
+                          <div class='col-sm-12'><strong class='text-white'>$langDurationVisitsPerCourse</strong></div>
                         </div>
                       </li>";
     foreach ($duration as $code => $time) {
@@ -861,7 +891,7 @@ function user_duration_per_course($u) {
                       <li class='list-group-item'>
                         <div class='row'>
                           <div class='col-sm-8'><b>" . q(course_code_to_title($code)) . "</b></div>
-                          <div class='col-sm-4 text-muted'>" . format_time_duration(0 + $time, 240) . "</div>
+                          <div class='col-sm-4 text-muted'>" . format_time_duration(0 + $time) . "</div>
                         </div>
                       </li>";
     }
@@ -876,6 +906,31 @@ function user_duration_per_course($u) {
 }
 
 /**
+ * @brief calculate user duration in course
+ * @param $u
+ * @return int|string
+ */
+function user_duration_course($u) {
+
+    global $course_id;
+
+    $totalDuration = 0;
+    $q = Database::get()->querySingle("SELECT SUM(ABS(duration)) AS duration
+                                FROM actions_daily
+                                WHERE course_id = ?d
+                                AND user_id = ?d
+                                AND actions_daily.module_id != " . MODULE_ID_TC . "
+                                AND actions_daily.module_id != " . MODULE_ID_LP . "",
+                            $course_id, $u);
+
+    if ($q) {
+        $totalDuration = format_time_duration(0 + $q->duration);
+    }
+    return $totalDuration;
+}
+
+
+/**
  * @brief get user 5 last logins
  * @global type $langLastVisits
  * @global type $dateFormatLong
@@ -884,7 +939,7 @@ function user_duration_per_course($u) {
  */
 function user_last_logins($u) {
 
-    global $langLastVisits, $dateFormatLong, $tool_content;
+    global $langLastVisits, $tool_content;
 
     $result = Database::get()->queryArray("SELECT * FROM loginout
                                         WHERE id_user = ?d ORDER by idLog DESC LIMIT 5", $u);
@@ -948,26 +1003,92 @@ function get_course_old_stats($cid, $mid, $start = null, $end = null)
 }
 
 /**
- * Get old statistics of logins/logouts to the platform.
- * @param date $start the start of period to retrieve statistics for
- * @param date $end the end of period to retrieve statistics for
+ * @brief Get old statistics of logins/logouts to the platform.
  * @return array an array appropriate for displaying in a c3 plot when json encoded
 */
-function get_login_old_stats($start = null, $end = null)
+function get_login_old_stats(): array
 {
-    $formattedr = array('time'=> array(), 'hits'=> array(), 'duration'=> array());
-    if(!is_null($start) && !is_null($end && !empty($start) && !empty($end))){
-        $g = build_group_selector_cond('month', 'start_date');
-        $groupby = $g['groupby'];
-        $date_components = $g['select'];
 
-        $q = "SELECT $date_components, SUM(login_sum) visits FROM loginout_summary WHERE start_date BETWEEN ?t AND ?t $groupby";
-        $r = Database::get()->queryArray($q, $start, $end);
-
-        foreach($r as $record){
-           $formattedr['time'][] = $record->cat_title;
-           $formattedr['hits'][] = $record->visits;
-        }
+    $r = get_user_login_archives();
+    foreach($r as $data) {
+        $formattedr['time'][] = $data[0];
+        $formattedr['hits'][] = $data[1];
     }
     return $formattedr;
+}
+
+/**
+ * @brief get user logins. First we seek archived logins in `login_sum` table.
+ * Otherwise we seek `loginout` table and update the `login_sum`
+ * @return array
+ */
+function get_user_login_archives(): array
+{
+    $content = [];
+    $start = new DateTime('now');
+    $interval = DateInterval::createFromDateString('first day of last month');
+    $period = new DatePeriod($start, $interval, 12, DatePeriod::EXCLUDE_START_DATE); // last 12 months
+
+    foreach($period as $time) {
+        $year_month_val = $time->format("Y-m");
+        $data = Database::get()->querySingle("SELECT login_sum,
+                                    DATE_FORMAT(start_date,'%Y-%m-%d') AS start_date
+                            FROM loginout_summary
+                            WHERE DATE_FORMAT(start_date,'%Y-%m') = ?s", $year_month_val);
+        if ($data) {
+            $data_month_year = $data->start_date;
+            $content[] = [ $data_month_year, $data->login_sum ];
+        } else {
+            $start_date = date_create($year_month_val);
+            $formatted_start_date = $start_date->format("Y-m-d H:i:s");
+            $end_date = date_add($start_date, date_interval_create_from_date_string("30 days"));
+            $formatted_end_date = $end_date->format("Y-m-d H:i:s");
+            $q_cnt = Database::get()->querySingle("SELECT COUNT(*) AS cnt
+                            FROM loginout
+                            WHERE action='LOGIN' AND
+                        `when` BETWEEN DATE(?s) AND DATE_ADD(DATE(?s), INTERVAL 1 MONTH)",
+                $time->format("Y-m-d") , $time->format("Y-m-d"));
+            $content[] = [ $year_month_val."-01", $q_cnt->cnt ];
+
+            Database::get()->query("INSERT INTO loginout_summary (login_sum, start_date, end_date) VALUES (?s, ?s, ?s)",
+                                            $q_cnt->cnt, $formatted_start_date, $formatted_end_date);
+        }
+    }
+    return $content;
+}
+
+/**
+ * @brief get monthly statistics (e.g. courses, users).  First we seek archived statistics in `monthly_summary` table.
+ * Otherwise we seek `courses` and `users` table and update the `monthly_summary`.
+ * @return array
+ */
+function get_monthly_archives(): array
+{
+    $content = [];
+    $start = new DateTime('now');
+    $interval = DateInterval::createFromDateString('first day of last month');
+    $period = new DatePeriod($start, $interval, 12, DatePeriod::EXCLUDE_START_DATE); // last 12 months
+
+    foreach ($period as $time) {
+        $year_month_val = $time->format("Y-m");
+        $data = Database::get()->querySingle("SELECT profesNum, studNum, visitorsNum, coursNum,
+                                    DATE_FORMAT(month,'%Y-%m') AS month
+                            FROM monthly_summary
+                            WHERE DATE_FORMAT(month,'%Y-%m') = ?s", $year_month_val);
+        if ($data) {
+            $data_month_year = $data->month;
+            $content[] = [ $data_month_year."-01", $data->profesNum, $data->studNum, $data->visitorsNum, $data->coursNum ];
+        } else {
+            $year_month_day = $time->format("Y-m-d");
+            $cnt_courses = Database::get()->querySingle("SELECT COUNT(*) AS cnt FROM course WHERE created <= ?t", $year_month_day)->cnt;
+            $cnt_prof = Database::get()->querySingle("SELECT COUNT(*) AS cnt FROM user WHERE status = " . USER_TEACHER . " AND registered_at <= ?t", $year_month_day)->cnt;
+            $cnt_students = Database::get()->querySingle("SELECT COUNT(*) AS cnt FROM user WHERE status = " . USER_STUDENT . " AND registered_at <= ?t", $year_month_day)->cnt;
+            $cnt_guest = Database::get()->querySingle("SELECT COUNT(*) AS cnt FROM user WHERE status = " . USER_GUEST . " AND registered_at <= ?t", $year_month_day)->cnt;
+            $content[] = [ $year_month_day, $cnt_prof, $cnt_students, $cnt_guest, $cnt_courses ];
+
+            Database::get()->query("INSERT INTO monthly_summary (month, profesNum, studNum, visitorsNum, coursNum) VALUES (?t, ?s, ?s, ?s, ?s)",
+                                        $year_month_day, $cnt_prof, $cnt_students, $cnt_guest, $cnt_courses);
+        }
+    }
+    return $content;
 }

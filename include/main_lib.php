@@ -320,7 +320,7 @@ function display_user($user, $print_email = false, $icon = true, $class = "", $c
         $print_email = $print_email && !empty($email);
     }
     if ($icon) {
-        $icon = profile_image($user->id, IMAGESIZE_SMALL, 'img-circle') . '&nbsp;';
+        $icon = profile_image($user->id, IMAGESIZE_SMALL, 'img-circle rounded-circle') . '&nbsp;';
     }
 
     if (!empty($class)) {
@@ -451,23 +451,25 @@ function get_course_users($cid) {
  * @param int $size optional image size in pixels (IMAGESIZE_SMALL or IMAGESIZE_LARGE)
  * @return string
  */
-function user_icon($uid, $size = null) {
-    global $themeimg, $urlAppend;
 
-    if (DBHelper::fieldExists("user", "id")) {
-        $user = Database::get()->querySingle("SELECT has_icon FROM user WHERE id = ?d", $uid);
-        if ($user) {
-            if (!$size) {
-                $size = IMAGESIZE_SMALL;
-            }
-            if ($user->has_icon) {
-                return "{$urlAppend}courses/userimg/{$uid}_$size.jpg";
-            } else {
-                return "$themeimg/user_$size.png";
-            }
+function user_icon($user_id, $size = IMAGESIZE_SMALL) {
+    global $webDir, $themeimg, $urlAppend, $course_id, $is_editor, $uid;
+
+    $user = Database::get()->querySingle("SELECT has_icon, pic_public
+        FROM user WHERE id = ?d", $user_id);
+    if ($user and
+        ($user->pic_public or $uid == $user_id or
+         $_SESSION['status'] == USER_TEACHER or
+         (isset($course_id) and $course_id and $is_editor))) {
+        $hash = profile_image_hash($user_id);
+        $hashed_file = "courses/userimg/{$user_id}_{$hash}_$size.jpg";
+        if (file_exists($hashed_file)) {
+           return $urlAppend . $hashed_file;
+        } elseif (file_exists("courses/userimg/{$user_id}_$size.jpg")) {
+           return "{$urlAppend}courses/userimg/{$user_id}_$size.jpg";
         }
     }
-    return '';
+    return "$themeimg/default_$size.png";
 }
 
 /**
@@ -2417,11 +2419,13 @@ function handle_unit_info_edit() {
                                     WHERE id = ?d AND course_id = ?d",
                             $title, $descr, $unitdurationfrom, $unitdurationto, $unit_id, $course_id);
         // tags
-        if (isset($_POST['tags'])) {
+        if (!isset($_POST['tags'])) {
+            $tagsArray = [];
+        } else {
             $tagsArray = $_POST['tags'];
-            $moduleTag = new ModuleElement($unit_id);
-            $moduleTag->syncTags($tagsArray);
         }
+        $moduleTag = new ModuleElement($unit_id);
+        $moduleTag->syncTags($tagsArray);
         $successmsg = trans('langCourseUnitModified');
     } else { // add new course unit
         $order = units_get_maxorder()+1;
@@ -2714,27 +2718,60 @@ function icon($name, $title = null, $link = null, $link_attrs = '', $with_title 
 }
 
 /**
- * Link for displaying user profile
- * @param type $uid
- * @param type $size
- * @param type $class
- * @return type
+ * Link / img tag for displaying user profile
+ * @param int $uid
+ * @param int $size
+ * @param string $class
+ * @return string
  */
-function profile_image($uid, $size, $class=null) {
-    global $urlServer, $themeimg, $langStudent;
+
+function profile_image($user_id, $size, $class=null) {
+    global $urlServer, $themeimg, $uid, $course_id, $is_editor;
 
     // makes $class argument optional
-    $class_attr = ($class == null)?'':"class='".q($class)."'";
 
-    $name = ($uid > 0) ? q(trim(uid_to_name($uid))) : '';
-    $size_width = ($size != IMAGESIZE_SMALL || $size != IMAGESIZE_LARGE)? "style='width:$size'":'';
-    $size = ($size != IMAGESIZE_SMALL && $size != IMAGESIZE_LARGE)? IMAGESIZE_LARGE:$size;
-    if ($uid > 0 and file_exists("courses/userimg/{$uid}_$size.jpg")) {
-        return "<img style='border-radius:50%; border:solid 2px #e8e8e8;' src='{$urlServer}courses/userimg/{$uid}_$size.jpg' $class_attr title='$name' alt='$name' $size_width>";
-    } else {
-        return "<img style='border-radius:50%; border:solid 2px #e8e8e8;' src='$themeimg/user_$size.png' $class_attr title='$name' alt='$name' $size_width>";
-       
+    $class_attr = ($class == null)? '': (" class='" . q($class) . "'");
+    $size_width = ($size != IMAGESIZE_SMALL || $size != IMAGESIZE_LARGE)? "style='width:{$size}px'":'';
+    $size = ($size == IMAGESIZE_SMALL or $size == IMAGESIZE_LARGE)? $size: IMAGESIZE_LARGE;
+    $imageurl = $username = '';
+
+    if ($user_id) {
+        $user = Database::get()->querySingle("SELECT has_icon, pic_public,
+            CONCAT(surname, ' ', givenname) AS fullname
+            FROM user WHERE id = ?d", $user_id);
+        $username = q(trim($user->fullname));
+        if ($user->pic_public or $_SESSION['status'] == USER_TEACHER or
+            $uid == $user_id or
+            (isset($course_id) and $course_id and $is_editor)) {
+                $hash = profile_image_hash($user_id);
+                $hashed_file = "courses/userimg/{$user_id}_{$hash}_$size.jpg";
+                if (file_exists($hashed_file)) {
+                    $imageurl = $urlServer . $hashed_file;
+                } elseif (file_exists("courses/userimg/{$user_id}_$size.jpg")) {
+                    $imageurl = "{$urlServer}courses/userimg/{$user_id}_$size.jpg";
+                }
+        }
     }
+
+    if (!$imageurl) {
+        $imageurl = "$themeimg/default_$size.png";
+    }
+    return "<img src='$imageurl' $class_attr title='$username' alt='$username' $size_width>";
+}
+
+/**
+ * Profile image hash to make image files unpredictable
+ * @param int $uid
+ * @return string
+ */
+function profile_image_hash($uid) {
+    static $code_key;
+
+    if (!isset($secret_key)) {
+        $code_key = get_config('code_key');
+    }
+    return str_replace(['/', '+', '='], ['-', '.', ''],
+        base64_encode(substr(hash_hmac('ripemd128', $uid, $code_key, true), 0, 10)));
 }
 
 function canonicalize_url($url) {
@@ -3543,7 +3580,7 @@ function action_bar($options, $page_title_flag = true, $secondary_menu_options =
             $accept_conf = isset($option['confirm_button']) ? $option['confirm_button'] : $langDelete;
             $confirm_extra = " data-title='$title_conf' data-message='" .
                 q($option['confirm']) . "' data-cancel-txt='$langCancel' data-action-txt='$accept_conf' data-action-class='deleteAdminBtn'";
-            $confirm_modal_class = ' confirmAction';
+            $confirm_modal_class = ' confirmAction text-wrap';
             $form_begin = "<form class='form-action-button-mydropdowns mb-0' method=post action='$url' class='mb-0'>";
             $form_end = '</form>';
             $href = '';
@@ -3552,7 +3589,7 @@ function action_bar($options, $page_title_flag = true, $secondary_menu_options =
             $href = " href='$url'";
         }
         if (!isset($option['button-class'])) {
-            $button_class = 'submitAdminBtn rounded-pill d-flex justify-content-center align-items-center me-2';
+            $button_class = 'submitAdminBtn d-flex justify-content-center align-items-center me-2';
         } else {
             $oldButton = '';
 
@@ -3578,9 +3615,9 @@ function action_bar($options, $page_title_flag = true, $secondary_menu_options =
             //replace button-class with myclass;
             $button_class = $option['button-class'];
             if($oldButton == 'btn-danger'){
-                $new_button = str_replace($oldButton,'deleteAdminBtn rounded-pill d-flex justify-content-center align-items-center me-2',$button_class);
+                $new_button = str_replace($oldButton,'deleteAdminBtn d-flex justify-content-center align-items-center me-2',$button_class);
             }else{
-                $new_button = str_replace($oldButton,'submitAdminBtn rounded-pill d-flex justify-content-center align-items-center me-2',$button_class);
+                $new_button = str_replace($oldButton,'submitAdminBtn d-flex justify-content-center align-items-center me-2',$button_class);
             }
 
             $button_class = $new_button;
@@ -3608,8 +3645,8 @@ function action_bar($options, $page_title_flag = true, $secondary_menu_options =
             $form_end = '</div>';
             $subMenu = '<ul class="dropdown-menu dropdown-menu-end mydropdownsSecond shadow-lg m-0 p-0">';
             foreach ($option['options'] as $subOption) {
-               $subMenu .= '<li><a class="'.$subOption['class'].' list-group-item" href="' . $subOption['url'] . '"><div class="d-inline-flex align-items-center">';
-               $subMenu .= isset($subOption['icon']) ? '<span class="'.$subOption['icon'].' pe-2"></span>' : '';
+               $subMenu .= '<li><a class="'.$subOption['class'].' list-group-item" href="' . $subOption['url'] . '"><div class="d-inline-flex align-items-start">';
+               $subMenu .= isset($subOption['icon']) ? '<span class="'.$subOption['icon'].' pe-2 pt-1"></span>' : '';
                $subMenu .= q($subOption['title']) . '</div></a></li>';
 
             }
@@ -3640,7 +3677,7 @@ function action_bar($options, $page_title_flag = true, $secondary_menu_options =
             array_unshift($out_secondary,
                 "<li$wrapped_class>$form_begin<a$confirm_extra  class='$confirm_modal_class list-group-item border border-top-0 border-bottom-secondary TextMedium'" . $href .
                 " $link_attrs>" .
-                "<div class='d-inline-flex align-items-center'><span class='fa $option[icon] pe-2'></span> $title</div></a>$form_end</li>");
+                "<div class='d-inline-flex align-items-start'><span class='fa $option[icon] pe-2 pt-1'></span> $title</div></a>$form_end</li>");
         }
         $i++;
     }
@@ -3653,7 +3690,7 @@ function action_bar($options, $page_title_flag = true, $secondary_menu_options =
     $secondary_title = isset($secondary_menu_options['secondary_title']) ? $secondary_menu_options['secondary_title'] : "";
     $secondary_icon = isset($secondary_menu_options['secondary_icon']) ? $secondary_menu_options['secondary_icon'] : "fa-cogs";
     if (count($out_secondary)) {
-        $action_button .= "<button data-bs-display='static' type='button' id='toolDropdown' class='btn submitAdminBtn rounded-pill dropdown-toggle' data-bs-toggle='dropdown' aria-expanded='false'><span class='fa $secondary_icon'></span><span class='hidden-xs text-dark'>$secondary_title</span> <span class='caret'></span><span class='hidden'></span></button>";
+        $action_button .= "<button data-bs-display='static' type='button' id='toolDropdown' class='btn submitAdminBtn dropdown-toggle' data-bs-toggle='dropdown' aria-expanded='false'><span class='fa $secondary_icon'></span><span class='hidden-xs text-dark'>$secondary_title</span> <span class='caret'></span><span class='hidden'></span></button>";
         $action_button .= "<ul class='dropdown-menu dropdown-menu-md-end p-0 m-0 mydropdowns shadow-lg' role='menu' aria-labelledby='toolDropdown'>
                      ".implode('', $out_secondary)."
                   </ul>";
@@ -3734,10 +3771,10 @@ function action_button($options, $secondary_menu_options = array(), $fc=false) {
                 $primary_form_begin = $form_begin;
                 $primary_form_end = $form_end;
                 $form_begin = $form_end = '';
-                $primary_icon_class = " confirmAction' data-title='$title' data-message='" .
+                $primary_icon_class = " confirmAction text-wrap' data-title='$title' data-message='" .
                     q($option['confirm']) . "' data-cancel-txt='$langCancel' data-action-txt='$accept' data-action-class='deleteAdminBtn'";
             } else {
-                $icon_class .= " confirmAction' data-title='$title' data-message='" .
+                $icon_class .= " confirmAction text-wrap' data-title='$title' data-message='" .
                     q($option['confirm']) . "' data-cancel-txt='$langCancel' data-action-txt='$accept' data-action-class='deleteAdminBtn'";
                 $primary_icon_class = '';
             }
@@ -3829,7 +3866,7 @@ function setOpenCoursesExtraHTML() {
         $langOpenCoursesShort, $langListOpenCoursesShort,$langCourses,$langCourse,$langNationalOpenCourses,
         $langNumOpenCourseBanner, $langNumOpenCoursesBanner, $themeimg;
     $openCoursesNum = Database::get()->querySingle("SELECT COUNT(id) as count FROM course_review WHERE is_certified = 1")->count;
-    if ($openCoursesNum > 0) {
+    
         $openFacultiesUrl = $urlAppend . 'modules/course_metadata/openfaculties.php';
         $openCoursesExtraHTML = "
             <div class='row w-100'>
@@ -3860,7 +3897,7 @@ function setOpenCoursesExtraHTML() {
                     </div>
                 </div>
             </div>";
-    }
+    
 }
 
 /**
@@ -4271,6 +4308,11 @@ function user_hook($user_id) {
 function valid_email($email) {
     static $validator, $validation;
 
+    // Non-ASCII characters in email are considered invalid
+    if (!ctype_print($email)) {
+        return false;
+    }
+
     if (!isset($validator)) {
         $validator = new Egulias\EmailValidator\EmailValidator();
         $validation = new Egulias\EmailValidator\Validation\RFCValidation();
@@ -4485,7 +4527,6 @@ function get_exercise_attempt_status_legend($status) {
     }
 }
 
-
 /**
  * @brief translate messages in blade views
  * @param $var_name
@@ -4511,4 +4552,38 @@ function trans($var_name, $var_array = []) {
             return ${$var_name};
         }
     }
+}
+
+function get_platform_logo($size='normal') {
+    global $themeimg, $urlAppend;
+
+    if ($size == 'small') {
+        $logo_img = $themeimg . '/logo_eclass_small';
+    } else {
+        $logo_img = $themeimg . '/eclass-new-logo.png';
+    }
+
+    $theme_id = get_config('theme_options_id');
+    if ($theme_id) {
+        $theme_options = Database::get()->querySingle("SELECT * FROM theme_options WHERE id = ?d", $theme_id);
+        $theme_options_styles = unserialize($theme_options->styles);
+        $bg_color = $theme_options_styles['leftNavBgColor'];
+
+        $urlThemeData = $urlAppend . 'courses/theme_data/' . $theme_id;
+        if ($size == 'small') {
+            if (isset($theme_options_styles['imageUploadSmall'])) {
+                $logo_img = "$urlThemeData/$theme_options_styles[imageUploadSmall]";
+            }
+        } else {
+            if (isset($theme_options_styles['imageUpload'])) {
+                $logo_img = "$urlThemeData/$theme_options_styles[imageUpload]";
+            }
+
+        }
+    }
+    $logo = "<div style='clear: right; background-color: $bg_color; padding: 1rem; margin-bottom: 2rem;'>
+                <img style='float: left; height:6rem;' src='$logo_img'>
+            </div>";
+
+    return $logo;
 }

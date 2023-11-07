@@ -472,7 +472,7 @@ if (isset($_GET['modifyPoll']) || isset($_GET['newPoll'])) {
                             </tr>
                             <tr>
                               <td>
-                                <select class='form-select h-100' id='assign_box' size='10' multiple>
+                                <select class='form-select h-100 rounded-0' id='assign_box' size='10' multiple>
                                 ".((isset($unassigned_options)) ? $unassigned_options : '')."
                                 </select>
                               </td>
@@ -480,7 +480,7 @@ if (isset($_GET['modifyPoll']) || isset($_GET['newPoll'])) {
                                 <input class='btn-outline-primary h-30px rounded-pill' type='button' onClick=\"move('assign_box','assignee_box')\" value='   &gt;&gt;   ' /><br /><input class='btn-outline-primary h-30px rounded-pill mt-3' type='button' onClick=\"move('assignee_box','assign_box')\" value='   &lt;&lt;   ' />
                               </td>
                               <td width='40%'>
-                                <select class='form-select h-100' id='assignee_box' name='ingroup[]' size='10' multiple>
+                                <select class='form-select h-100 rounded-0' id='assignee_box' name='ingroup[]' size='10' multiple>
                                 ".((isset($assignee_options)) ? $assignee_options : '')."
                                 </select>
                               </td>
@@ -719,13 +719,13 @@ if (isset($_GET['modifyPoll']) || isset($_GET['newPoll'])) {
 
  
     <div class='col-12 mt-3'>
-        <div class='panel panel-primary'>
-            <div class='panel-heading'>
-                <div class='panel-title'>$langQuestion&nbsp;"
+        <div class='card panelCard px-lg-4 py-lg-3'>
+            <div class='card-header border-0 bg-white d-flex justify-content-between align-items-center'>
+                <div class='text-uppercase normalColorBlueText TextBold fs-6'>$langQuestion&nbsp;"
                     . icon('fa-edit text-white', $langEditChange, $_SERVER['SCRIPT_NAME']."?course=$course_code&pid=$pid&modifyQuestion=$question->pqid") .
                 "</div>
             </div>
-            <div class='panel-body'>
+            <div class='card-body'>
                   <h6>$question->question_text<br><small><em>".$aType[$question->qtype - 1]."</em></small></h6>
             </div>
         </div>
@@ -734,11 +734,11 @@ if (isset($_GET['modifyPoll']) || isset($_GET['newPoll'])) {
     $tool_content .= "
     
     <div class='col-12 mt-3'>
-        <div class='panel panel-info'>
-            <div class='panel-heading'>
-                <div class='panel-title'>$langQuestionAnswers</div>
+        <div class='card panelCard px-lg-4 py-lg-3'>
+            <div class='card-header border-0 bg-white d-flex justify-content-between align-items-center'>
+                <div class='text-uppercase normalColorBlueText TextBold fs-6'>$langQuestionAnswers</div>
             </div>
-            <div class='panel-body' style='padding-left:15px; padding-right:15px;'>
+            <div class='card-body'>
                     <form class='form-horizontal' role='form' action='$_SERVER[SCRIPT_NAME]?course=$course_code&amp;pid=$pid&amp;modifyAnswers=$question_id' method='post'>                    
                     
                     <div class='form-group'>
@@ -836,12 +836,12 @@ if (isset($_GET['modifyPoll']) || isset($_GET['newPoll'])) {
     $tool_content .= "
 
     <div class='col-12 mb-3'>
-        <div class='panel panel-primary'>
-          <div class='panel-heading'>
-            <div class='panel-title'>$langInfoPoll &nbsp;".icon('fa-edit text-white', $langEditPoll, "admin.php?course=$course_code&amp;pid=$pid&amp;modifyPoll=yes")."</div>
+        <div class='card panelCard px-lg-4 py-lg-3'>
+          <div class='card-header border-0 bg-white d-flex justify-content-between align-items-center'>
+            <div class='text-uppercase normalColorBlueText TextBold fs-6'>$langInfoPoll &nbsp;".icon('fa-edit', $langEditPoll, "admin.php?course=$course_code&amp;pid=$pid&amp;modifyPoll=yes")."</div>
           </div>
 
-          <div class='panel-body'>
+          <div class='card-body'>
             <div class='row p-2 margin-bottom-fat'>
                 <div class='col-sm-3'>
                     <strong class='control-label-notes'>$langTitle:</strong>
@@ -991,9 +991,9 @@ if (isset($_GET['modifyPoll']) || isset($_GET['newPoll'])) {
             $tool_content .= "<div class='col-12'><div class='alert alert-warning'>$langPollEmpty</div></div>";
         }
     } elseif ($poll->type==1) {
-        $tool_content .= "<div class='col-12'><div class='alert alert-info' role='alert'>$colles_desc</div></div>";
+        $tool_content .= "<div class='col-12'><div class='alert alert-info Borders' role='alert'>$colles_desc</div></div>";
     } elseif ($poll->type==2) {
-        $tool_content .= "<div class='col-12'><div class='alert alert-info' role='alert'>$rate_scale</div></div>";
+        $tool_content .= "<div class='col-12'><div class='alert alert-info Borders' role='alert'>$rate_scale</div></div>";
     }
 }
 draw($tool_content, 2, null, $head_content);

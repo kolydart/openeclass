@@ -89,7 +89,6 @@ if (isset($_POST['submit'])) {
         $_POST['finish_date'] = null;
     }
     if (empty($_POST['title'])) {
-        //Session::Messages($langNoCourseTitle, 'alert-danger');
         Session::flash('message',$langNoCourseTitle);
         Session::flash('alert-class', 'alert-danger');
         redirect_to_home_page("modules/course_info/index.php?course=$course_code");
@@ -127,6 +126,13 @@ if (isset($_POST['submit'])) {
             $_POST['formvisible'] = '2';
         }
 
+        // flipped classroom settings
+        if ($view_type == 'flippedclassroom') {
+            $view_type = 'units';
+            $flipped_flag = 2;
+        } else {
+            $flipped_flag = 0;
+        }
         // validate departments
         $departments = isset($_POST['department']) ? $_POST['department'] : array();
         $deps_valid = true;
@@ -159,11 +165,12 @@ if (isset($_POST['submit'])) {
                                 prof_names = ?s,
                                 lang = ?s,
                                 password = ?s,
-                                view_type = ?s
+                                view_type = ?s,
+                                flipped_flag = ?s
                             WHERE id = ?d",
                                 $_POST['title'], mb_substr($_POST['fcode'], 0, 100), $_POST['course_keywords'],
                                 $_POST['formvisible'], $course_license, $_POST['teacher_name'],
-                                $session->language, $password, $view_type, $course_id);
+                                $session->language, $password, $view_type, $flipped_flag, $course_id);
             $course->refresh($course_id, $departments);
 
             Log::record($course_id, MODULE_ID_COURSEINFO, LOG_MODIFY,
@@ -201,8 +208,9 @@ if (isset($_POST['submit'])) {
             if (isset($_POST['enable_docs_public_write'])) {
                 setting_set(SETTING_DOCUMENTS_PUBLIC_WRITE, $_POST['enable_docs_public_write'], $course_id);
             }
-            //-------------------------
-            //Session::Messages($langModifDone,'alert-success');
+            if (isset($_POST['enable_access_users_list'])) {
+                setting_set(SETTING_USERS_LIST_ACCESS, $_POST['enable_access_users_list'], $course_id);
+            }
             Session::flash('message',$langModifDone);
             Session::flash('alert-class', 'alert-success');
             redirect_to_home_page("modules/course_info/index.php?course=$course_code");
@@ -212,45 +220,45 @@ if (isset($_POST['submit'])) {
     warnCourseInvalidDepartment();
 
     $data['action_bar'] = action_bar([
-        [ 'title' => $langCourseDescription,
-            'url' => "../course_description/index.php?course=$course_code&".generate_csrf_token_link_parameter(),
+        ['title' => $langCourseDescription,
+            'url' => "../course_description/index.php?course=$course_code&" . generate_csrf_token_link_parameter(),
             'icon' => 'fa-info-circle',
-            'level' => 'primary-label' ],
-        [ 'title' => $langBackupCourse,
-          'url' => "archive_course.php?course=$course_code&".generate_csrf_token_link_parameter(),
-          'icon' => 'fa-archive',
-          'level' => 'primary-label' ],
-        [ 'title' => $langBack,
-          'url' => "{$urlServer}courses/$course_code/index.php",
-          'icon' => 'fa-reply',
-          'level' => 'primary-label' ],
-        [ 'title' => $langCloneCourse,
-          'url' => "clone_course.php?course=$course_code",
-          'icon' => 'fa-archive',
-          'show' => get_config('allow_teacher_clone_course') || $is_admin ],
-        [ 'title' => $langRefreshCourse,
-          'url' => "refresh_course.php?course=$course_code",
-          'icon' => 'fa-refresh' ],
-        [ 'title' => $langCourseMetadata,
-          'url' => "../course_metadata/index.php?course=$course_code",
-          'icon' => 'fa-file-text',
-          'show' => get_config('course_metadata') ],
-        [ 'title' => $langCourseMetadataControlPanel,
-          'url' => "../course_metadata/control.php?course=$course_code",
-          'icon' => 'fa-list',
-          'show' => get_config('opencourses_enable') && $is_opencourses_reviewer ],
-        [ 'title' => $langCourseCategoryActions,
-          'url' => "../course_category/index.php?course=$course_code",
-          'icon' => 'fa-file-text' ],
-        [ 'title' => $langDelCourse,
-          'url' => "delete_course.php?course=$course_code",
-          'icon' => 'fa-times',
-          'button-class' => 'btn-danger' ]
+            'level' => 'primary-label'],
+        ['title' => $langBackupCourse,
+            'url' => "archive_course.php?course=$course_code&" . generate_csrf_token_link_parameter(),
+            'icon' => 'fa-archive',
+            'level' => 'primary-label'],
+        ['title' => $langBack,
+            'url' => "{$urlServer}courses/$course_code/index.php",
+            'icon' => 'fa-reply',
+            'level' => 'primary-label'],
+        ['title' => $langCloneCourse,
+            'url' => "clone_course.php?course=$course_code",
+            'icon' => 'fa-archive',
+            'show' => get_config('allow_teacher_clone_course') || $is_admin],
+        ['title' => $langRefreshCourse,
+            'url' => "refresh_course.php?course=$course_code",
+            'icon' => 'fa-refresh'],
+        ['title' => $langCourseMetadata,
+            'url' => "../course_metadata/index.php?course=$course_code",
+            'icon' => 'fa-file-text',
+            'show' => get_config('course_metadata')],
+        ['title' => $langCourseMetadataControlPanel,
+            'url' => "../course_metadata/control.php?course=$course_code",
+            'icon' => 'fa-list',
+            'show' => get_config('opencourses_enable') && $is_opencourses_reviewer],
+        ['title' => $langCourseCategoryActions,
+            'url' => "../course_category/index.php?course=$course_code",
+            'icon' => 'fa-file-text'],
+        ['title' => $langDelCourse,
+            'url' => "delete_course.php?course=$course_code",
+            'icon' => 'fa-times',
+            'button-class' => 'btn-danger']
     ]);
 
 
     $c = Database::get()->querySingle("SELECT title, keywords, visible, public_code, prof_names, lang,
-                	       course_license, password, id, view_type, start_date, finish_date
+                	       course_license, password, id, view_type, flipped_flag
                       FROM course WHERE code = ?s", $course_code);
     if ($depadmin_mode) {
         list($js, $html) = $tree->buildCourseNodePicker(array('defaults' => $course->getDepartmentIds($c->id), 'allowables' => $allowables));
@@ -278,8 +286,6 @@ if (isset($_POST['submit'])) {
     $data['course_keywords'] = q($c->keywords);
 
     $data['password'] = q($c->password);
-    $data['start_date'] = $c->start_date ? $c->start_date: '';
-    $data['finish_date'] = $c->finish_date ? $c->finish_date: '';
 
     $course_type = array('simple' => '', 'units' => '', 'wall' => '', 'activity' => '');
     $course_type[$c->view_type] = 'checked';
@@ -287,6 +293,11 @@ if (isset($_POST['submit'])) {
     $data['course_type_units'] = $course_type['units'];
     $data['course_type_wall'] = $course_type['wall'];
     $data['course_type_activity'] = $course_type['activity'];
+    if ($c->view_type == "units" && $c->flipped_flag == 2) {
+        $data['course_type_flipped_classroom'] = 'checked';
+    } else {
+        $data['course_type_flipped_classroom'] = '';
+    }
 
     $course_license = $c->course_license;
     if ($course_license > 0 and $course_license < 10) {
@@ -332,6 +343,16 @@ if (isset($_POST['submit'])) {
     }
     $data['sharing_radio_dis'] = $sharing_radio_dis;
     $data['sharing_dis_label'] = $sharing_dis_label;
+
+    if (setting_get(SETTING_USERS_LIST_ACCESS, $course_id) == 1) {
+        $check_enable_access_users_list = 'checked';
+        $check_disable_access_users_list = '';
+    } else {
+        $check_enable_access_users_list = '';
+        $check_disable_access_users_list = 'checked';
+    }
+    $data['check_enable_access_users_list'] = $check_enable_access_users_list;
+    $data['check_disable_access_users_list'] = $check_disable_access_users_list;
 
     if (setting_get(SETTING_COURSE_FORUM_NOTIFICATIONS, $course_id) == 1) {
         $checkForumDis = '';

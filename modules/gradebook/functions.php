@@ -18,6 +18,9 @@
  *                  e-mail: info@openeclass.org
  * ======================================================================== */
 
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+
 require_once 'modules/progress/GradebookEvent.php';
 
 /**
@@ -490,21 +493,21 @@ function user_gradebook_settings() {
                         <div class='col-sm-12 col-sm-offset-2'>
                             <div class='table-responsive'>
                                 <table id='participants_tbl' class='table-default hide'>
-                                    <tr class='title1'>
+                                    <tr class='title1 list-header'>
                                       <td id='users'>$langStudents</td>
                                       <td class='text-center'>$langMove</td>
                                       <td>$langParticipate</td>
                                     </tr>
                                     <tr>
                                       <td>
-                                        <select class='form-select h-100' id='users_box' size='10' multiple></select>
+                                        <select class='form-select h-100 rounded-0' id='users_box' size='10' multiple></select>
                                       </td>
                                       <td class='text-center'>
                                         <input class='btn btn-outline-primary rounded-pill' type='button' onClick=\"move('users_box','participants_box')\" value='   &gt;&gt;   ' /><br />
                                         <input class='btn btn-outline-primary rounded-pill mt-2' type='button' onClick=\"move('participants_box','users_box')\" value='   &lt;&lt;   ' />
                                       </td>
                                       <td width='40%'>
-                                        <select class='form-select h-100' id='participants_box' name='specific[]' size='10' multiple></select>
+                                        <select class='form-select h-100 rounded-0' id='participants_box' name='specific[]' size='10' multiple></select>
                                       </td>
                                     </tr>
                                 </table>
@@ -1060,11 +1063,18 @@ function display_available_assignments($gradebook_id) {
         $tool_content .= "</tr>";
         foreach ($checkForAss as $newAssToGradebook) {
             $content = ellipsize_html($newAssToGradebook->description, 50);
-            if ($newAssToGradebook->assign_to_specific) {
+            if ($newAssToGradebook->assign_to_specific == 1) { // assignment to specific users
                 $content .= "$m[WorkAssignTo]:<br>";
-                $checkForAssSpec = Database::get()->queryArray("SELECT user_id, user.surname , user.givenname FROM `assignment_to_specific`, user WHERE user_id = user.id AND assignment_id = ?d", $newAssToGradebook->id);
+                $checkForAssSpec = Database::get()->queryArray("SELECT user_id, user.surname, user.givenname FROM `assignment_to_specific`, user WHERE user_id = user.id AND assignment_id = ?d", $newAssToGradebook->id);
                 foreach ($checkForAssSpec as $checkForAssSpecR) {
                     $content .= q($checkForAssSpecR->surname). " " . q($checkForAssSpecR->givenname) . "<br>";
+                }
+            }
+            if ($newAssToGradebook->assign_to_specific == 2) { // assignment to specific groups
+                $content .= "$m[WorkAssignTo]:<br>";
+                $checkForAssSpec = Database::get()->queryArray("SELECT group_id, `group`.name FROM `assignment_to_specific`, `group` WHERE assignment_to_specific.group_id= `group`.id AND assignment_id = ?d", $newAssToGradebook->id);
+                foreach ($checkForAssSpec as $checkForAssSpecR) {
+                    $content .= q($checkForAssSpecR->name) . "<br>";
                 }
             }
             $tool_content .= "<tr>";
@@ -1125,7 +1135,7 @@ function register_user_grades($gradebook_id, $actID) {
             $langID, $langName, $langSurname, $langAm, $langRegistrationDateShort,
             $langGradebookGrade, $langGradebookNoTitle,
             $langGradebookBooking, $langGradebookTotalGrade,
-            $langGradebookActivityWeight, $langCancel, $dateFormatMiddle;
+            $langGradebookActivityWeight, $langCancel;
 
     //display form and list
     $gradebook_range = get_gradebook_range($gradebook_id);
@@ -1192,14 +1202,15 @@ function register_user_grades($gradebook_id, $actID) {
         }
         $tool_content .= "</tbody></table></div></div>";
         $tool_content .= "<div class='form-group'>";
-        $tool_content .= "<div class='col-xs-12'>" .
+        $tool_content .= "<div class='col-12 d-flex'>" .
                         form_buttons(array(
                             array(
                                 'text' => $langGradebookBooking,
                                 'name' => 'bookUsersToAct',
-                                'value'=> $langGradebookBooking
+                                'value'=> $langGradebookBooking,
+                                'class' => 'submitAdminBtn',
                                 ))).
-                        "<a href='index.php?course=$course_code&amp;gradebook_id=" . getIndirectReference($gradebook_id) . "' class='btn btn-default'>$langCancel</a>";
+                        "<a href='index.php?course=$course_code&amp;gradebook_id=" . getIndirectReference($gradebook_id) . "' class='btn cancelAdminBtn'>$langCancel</a>";
         $tool_content .= "</div></div>";
         $tool_content .= generate_csrf_token_form_field()."</form></div></div>";
     }
@@ -1628,6 +1639,139 @@ function insert_grades($gradebook_id, $actID) {
     $message = "<div class='alert alert-success'>$langGradebookEdit</div>";
     $tool_content .= $message . "<br/>";
 }
+
+/**
+ * @brief import user grades in gradebook activity from a csv file
+ * @param $gradebook_id
+ * @param $activity_id
+ * @return void
+ */
+function import_grades($gradebook_id, $activity_id, $import = false) {
+
+    global $tool_content, $course_code,
+           $langImportGradesGradebookHelp, $langWorkFile, $langUpload,
+           $langImportInvalidUsers, $langImportGradesError, $langImportErrorLines,
+           $langImportExtraGradebookUsers, $langGradesImported;
+
+    if ($import and isset($_FILES['userfile'])) { // import user grades
+        $gradebook_range = get_gradebook_range($gradebook_id);
+
+        $file = IOFactory::load($_FILES['userfile']['tmp_name']);
+        $sheet = $file->getActiveSheet();
+        $userGrades = $errorLines = $invalidUsers = $extraUsers = [];
+
+        $highestRow = $sheet->getHighestRow();
+        $highestColumn = $sheet->getHighestColumn();
+        $highestColumnIndex = Coordinate::columnIndexFromString($highestColumn);
+
+        for ($row = 1; $row <= $highestRow; ++$row) {
+            if ($row <= 4) { // first 4 rows are headers
+                continue;
+            } else {
+                for ($col = 4; $col <= $highestColumnIndex; $col = $col + 2) {
+                    $value = trim($sheet->getCellByColumnAndRow($col, $row)->getValue());
+                    $data[] = $value;
+                }
+                if (!is_numeric($data[1]) or $data[1] < 0 or $data[1] > $gradebook_range) {
+                    $errorLines[] = $data;
+                }
+                if (preg_match('/\(([^)]+)\)/', $data[0], $matches)) {
+                    $username = $matches[1];
+                } else {
+                    $username = $data[0];
+                }
+                $uname_where = (get_config('case_insensitive_usernames')) ? "COLLATE utf8mb4_general_ci = " : "COLLATE utf8mb4_bin = ";
+                $user = Database::get()->querySingle("SELECT * FROM user WHERE username $uname_where ?s", $username);
+
+                if (!$user) {
+                    $invalidUsers[] = $username;
+                } else {
+                    $submission = Database::get()->querySingle("SELECT id FROM gradebook_users WHERE uid = ?d AND gradebook_id = ?d",
+                        $user->id, $gradebook_id);
+                    if (!$submission) {
+                        $extraUsers[] = $username;
+                    } else {
+                        $userGrades[$user->id] = $data[1];
+                    }
+                }
+                $data = [];
+            }
+        }
+
+        if (!($errorLines or $invalidUsers or $extraUsers)) {
+            foreach ($userGrades as $user_id => $grade) {
+                Database::get()->query("INSERT INTO gradebook_book (uid, gradebook_activity_id, grade, comments)
+                                            VALUES (?d, ?d, ?f, ?s)
+                                        ON DUPLICATE KEY UPDATE grade = ?f",
+                    $user_id, $activity_id, $grade/$gradebook_range, '', $grade/$gradebook_range);
+            }
+            Session::Messages($langGradesImported, 'alert-success');
+            redirect_to_home_page("modules/gradebook/index.php?course=$course_code&gradebook_id=" . getIndirectReference($gradebook_id) . "&ins=" . getIndirectReference($activity_id));
+        } else {
+            $message = $langImportGradesError;
+            if ($invalidUsers) {
+                $errorText = implode('', array_map(function ($username) {
+                    return '<li>' . q($username) . '</li>';
+                }, $invalidUsers));
+                $message .= "<p>$langImportInvalidUsers<ul>$errorText</ul></p>";
+            }
+            if ($extraUsers) {
+                $errorText = implode('', array_map(function ($username) {
+                    return '<li>' . q($username) . '</li>';
+                }, $extraUsers));
+                $message .= "<p>$langImportExtraGradebookUsers<ul>$errorText</ul></p>";
+            }
+            if ($errorLines) {
+                $errorText = implode('', array_map(function ($line) {
+                    $line = array_map('q', $line);
+                    return '<tr class="danger"><td>' . implode('</td><td>', $line) . '</td></tr>';
+                }, $errorLines));
+                $message .= "<p>$langImportErrorLines
+                    <table class='table table-condensed table-bordered table-striped'>
+                        <tbody>$errorText</tbody>
+                    </table></p>";
+            }
+            Session::Messages($message, 'alert-danger');
+            redirect_to_home_page("modules/gradebook/index.php?course=$course_code&gradebook_id=" . getIndirectReference($gradebook_id) . "&ins=" . getIndirectReference($activity_id));
+        }
+    } else { // import grades form
+        enableCheckFileSize();
+        $tool_content .= "
+            <div class='row'>
+                <div class='col-sm-12'>
+                    <div class='form-wrapper'>
+                        <form class='form-horizontal' enctype='multipart/form-data' method='post' 
+                            action='$_SERVER[SCRIPT_NAME]?course=$course_code&amp;gradebook_id=" . getIndirectReference($gradebook_id) . "&amp;imp=$activity_id&amp;import_grades=true'>
+                            <fieldset>
+                                <div class='form-group'>
+                                    <div class='col-sm-12'>
+                                        <p class='form-control-static'>$langImportGradesGradebookHelp</p>
+                                        <a href='dumpgradebook.php?course=$course_code&t=3&gradebook_id=" . getIndirectReference($gradebook_id) . "&activity_id=$activity_id'>Χρήστες του βαθμολογίου</a>
+                                    </div>
+                                </div>
+                                <div class='form-group'>
+                                    <label for='userfile' class='col-sm-2 control-label'>$langWorkFile:</label>
+                                    <div class='col-sm-10'>" . fileSizeHidenInput() . "
+                                        <input type='file' id='userfile' name='userfile'>
+                                    </div>
+                                </div>
+                                <div class='form-group'>
+                                    <div class='col-sm-offset-2 col-sm-10'>" .
+                    form_buttons([['class' => 'btn-primary',
+                        'name' => 'new_assign',
+                        'value' => $langUpload,
+                        'javascript' => ''],
+                        ['href' => "$_SERVER[SCRIPT_NAME]?course=$course_code&amp;gradebook_id=" . getIndirectReference($gradebook_id) . "&amp;ins=" . getIndirectReference($activity_id) . ""]]) . "
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                    </div>
+                </div>
+            </div>";
+    }
+}
+
 
 /**
  * @brief update gradebook with user grade

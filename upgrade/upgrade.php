@@ -52,7 +52,7 @@ if ($ajax_call and (!isset($_POST['token']) or !validate_csrf_token($_POST['toke
 stop_output_buffering();
 $error_message = null;
 set_time_limit(0);
-$tbl_options = 'DEFAULT CHARACTER SET=utf8mb4 COLLATE utf8mb4_unicode_520_ci ENGINE=InnoDB';
+    $tbl_options = 'DEFAULT CHARACTER SET=utf8mb4 COLLATE utf8mb4_unicode_520_ci ENGINE=InnoDB';
 
 load_global_messages();
 
@@ -307,8 +307,16 @@ if ($command_line or $ajax_call) {
                     steps_finished();
                 }
             }  elseif ($version === '3.14') {
-                upgrade_to_3_14($tbl_options);
-                steps_finished();
+                if ($step == 1) {
+                    upgrade_to_3_14($tbl_options);
+                    break_on_step();
+                }
+
+                if ($step == 2) {
+                    message($langEncodeUserProfilePics, "$version-encode");
+                    encode_user_profile_pics();
+                    steps_finished();
+                }
             } elseif ($version === '4.0') {
                 upgrade_to_4_0($tbl_options);
                 steps_finished();

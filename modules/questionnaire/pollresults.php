@@ -114,8 +114,7 @@ if (!$thePoll) {
 $PollType = $thePoll->type;
 $default_answer = $thePoll->default_answer;
 if (!$is_editor && !$thePoll->show_results) {
-   // Session::Messages($langPollResultsAccess);
-    Session::flash('message',$langPollResultsAccess); 
+    Session::flash('message',$langPollResultsAccess);
     Session::flash('alert-class', 'alert-warning');
     redirect_to_home_page('modules/questionnaire/index.php?course='.$course_code);
 }
@@ -124,39 +123,37 @@ $total_participants = Database::get()->querySingle("SELECT COUNT(*) AS total FRO
 if (!$total_participants) {
    redirect_to_home_page("modules/questionnaire/index.php?course=$course_code");
 }
-$export_box = "";
-if ($is_editor) {
-    $export_box .= "
-    <div class='col-sm-12'><div class='alert alert-info'>
-            <b>$langDumpUserDurationToFile:</b>
-            <ul>
-              <li><a href='dumppollresults.php?course=$course_code&amp;pid=$pid'>$langPollPercentResults</a>
-                  (<a href='dumppollresults.php?course=$course_code&amp;pid=$pid&amp;enc=UTF-8'>$langcsvenc2</a>)</li>
-              <li><a href='dumppollresults.php?course=$course_code&amp;pid=$pid&amp;full=1'>$langPollFullResults</a>
-                  (<a href='dumppollresults.php?course=$course_code&amp;pid=$pid&amp;full=1&amp;enc=UTF-8'>$langcsvenc2</a>)</li>
-            </ul>
-        </div></div>";
-}
+
 if (isset($_REQUEST['unit_id'])) {
     $back_link = "../units/index.php?course=$course_code&amp;id=" . intval($_REQUEST['unit_id']);
 } else {
     $back_link = "index.php?course=$course_code";
 }
+
 $tool_content .= action_bar(array(
-            array(
-                'title' => $langBack,
-                'url' => $back_link,
-                'icon' => 'fa-reply',
-                'level' => 'primary-label'
-            )
-        ))."
-$export_box
-<div class='col-12'>
-<div class='panel panel-primary'>
-    <div class='panel-heading'>
-        <div class='panel-title'>$langInfoPoll</div>
+                    array('title' => $langPollPercentResults,
+                          'url' => "dumppollresults.php?course=$course_code&amp;pid=$pid",
+                          'icon' => 'fa-download',
+                          'level' => 'primary-label',
+                          'show' => $is_editor),
+                    array('title' => $langPollFullResults,
+                          'url' => "dumppollresults.php?course=$course_code&amp;pid=$pid&amp;full=1",
+                          'icon' => 'fa-download',
+                          'level' => 'primary-label',
+                          'show' => $is_editor),
+                    array(
+                         'title' => $langBack,
+                         'url' => $back_link,
+                         'icon' => 'fa-reply',
+                         'level' => 'primary-label'
+                        )
+                ));
+$tool_content .= "<div class='col-12'>
+<div class='card panelCard px-lg-4 py-lg-3'>
+    <div class='card-header border-0 bg-white d-flex justify-content-between align-items-center'>
+        <div class='text-uppercase normalColorBlueText TextBold fs-6'>$langInfoPoll</div>
     </div>
-    <div class='panel-body'>
+    <div class='card-body'>
         <div class='row p-2 margin-bottom-fat'>
             <div class='col-md-5 col-12'>
                 <strong class='control-label-notes'>$langTitle:</strong>
@@ -212,12 +209,12 @@ if ($PollType == POLL_NORMAL) {
             $tool_content .= "<div class='col-12 mt-3'><div class='alert alert-info'>$theQuestion->question_text</div></div>";
         } else {
             $tool_content .= "
-            <div class='col-sm-12 mt-3'>
-            <div class='panel panel-success'>
-                <div class='panel-heading'>
-                    <div class='panel-title'>$langQuestion $j</div>
+            <div class='col-12 mt-3'>
+            <div class='card panelCard px-lg-4 py-lg-3'>
+                <div class='card-header border-0 bg-white d-flex justify-content-between align-items-center'>
+                    <div class='text-uppercase normalColorBlueText TextBold fs-6'>$langQuestion $j</div>
                 </div>
-                <div class='panel-body'>";
+                <div class='card-body'>";
 
             $j++;
 
@@ -246,7 +243,8 @@ if ($PollType == POLL_NORMAL) {
                     <table class='table-default'>
                         <tr class='list-header'>
                             <th>$langAnswer</th>
-                            <th>$langSurveyTotalAnswers</th>".(($thePoll->anonymized) ? '' : '<th>' . $langStudents . '</th>')."</tr>";
+                            <th>$langSurveyTotalAnswers</th>
+                            <th>$langPercentage</th>".(($thePoll->anonymized) ? '' : '<th>' . $langStudents . '</th>')."</tr>";
                 foreach ($answers as $answer) {
                     $percentage = round(100 * ($answer->count / $answer_total),2);
                     if (isset($answer->answer_text)) {
@@ -294,8 +292,14 @@ if ($PollType == POLL_NORMAL) {
                     }
                     $answers_table .= "
                         <tr>
-                                <td>".$q_answer."</td>
-                                <td>$answer->count</td>".(($thePoll->anonymized == 1)?'':'<td>'.$ellipsized_names_str.(($ellipsized_names_str != $names_str)? ' <a href="#" class="trigger_names" data-type="multiple" id="show">'.$langViewShow.'</a>' : '').'</td><td class="hidden_names" style="display:none;">'.q($names_str).' <a href="#" class="trigger_names" data-type="multiple" id="hide">'.$langViewHide.'</a></td>')."</tr>";
+                                <td>$q_answer</td>
+                                <td>$answer->count</td>
+                                <td>$percentage%</td>" .
+                                (($thePoll->anonymized == 1) ? '' :
+                                '<td>' . $ellipsized_names_str .
+                                (($ellipsized_names_str != $names_str)? ' <a href="#" class="trigger_names" data-type="multiple" id="show">'.$langViewShow.'</a>' : '') .
+                                '</td>
+                                <td class="hidden_names" style="display:none;">'.q($names_str).' <a href="#" class="trigger_names" data-type="multiple" id="hide">'.$langViewHide.'</a></td>')."</tr>";
                     unset($names_array);
                 }
                 $answers_table .= "</table><br>";
@@ -329,7 +333,8 @@ if ($PollType == POLL_NORMAL) {
                     <table class='table-default'>
                         <tr class='list-header'>
                             <th>$langAnswer</th>
-                            <th>$langSurveyTotalAnswers</th>".(($thePoll->anonymized == 1)?'':'<th>'.$langStudents.'</th>')."</tr>";
+                            <th>$langSurveyTotalAnswers</th>
+                            <th>$langPercentage</th>".(($thePoll->anonymized == 1)?'':'<th>'.$langStudents.'</th>')."</tr>";
                 foreach ($answers as $answer) {
                     $percentage = round(100 * ($answer->count / $answer_total),2);
                     $this_chart_data['percentage'][array_search($answer->answer_text,$this_chart_data['answer'])] = $percentage;
@@ -365,7 +370,8 @@ if ($PollType == POLL_NORMAL) {
                     $answers_table .= "
                         <tr>
                             <td>".q($answer->answer_text)."</td>
-                            <td>$answer->count</td>"
+                            <td>$answer->count</td>
+                            <td>$percentage%</td>"
                             . (($thePoll->anonymized == 1) ?
                             '' :
                             '<td>'.$ellipsized_names_str.

@@ -111,9 +111,9 @@ load_js('select2');
 $head_content .= "<script type='text/javascript'>
     $(document).ready(function () {
         $('#popupattendance1').click(function() {
-	     window.open($(this).prop('href'), '', 'height=200,width=500,scrollbars=no,status=no');
-	     return false;
-	});
+            window.open($(this).prop('href'), '', 'height=200,width=500,scrollbars=no,status=no');
+            return false;
+        });
 
         $('#select-groups').select2();
         $('#selectAll').click(function(e) {
@@ -177,7 +177,7 @@ if ($is_editor) {
         } else {
             /* find enabled tc servers */
             $servers = [];
-            foreach (is_configured_tc_server() as $name) {
+            foreach (get_enabled_tc_services() as $name) {
                 if (is_active_tc_server($name, $course_id)) {
                    $servers[] = $name;
                 }
@@ -188,36 +188,40 @@ if ($is_editor) {
                 $tc_server_type = '';
             }
 
-            $tool_content .= action_bar(array(
-                array('title' => $langNewBBBSession,
-                    'url' => "$_SERVER[SCRIPT_NAME]?course=$course_code&amp;new=1",
-                    'icon' => 'fa-plus-circle',
-                    'button-class' => 'btn-success',
-                    'level' => 'primary-label',
-                    'show' => count($servers) > 1),
-                array('title' => $langNewBBBSession,
-                      'url' => "$_SERVER[SCRIPT_NAME]?course=$course_code&amp;add=1&amp;tc_type=$tc_server_type",
-                      'icon' => 'fa-plus-circle',
-                      'button-class' => 'btn-success',
-                      'level' => 'primary-label',
-                      'show' => !empty($tc_server_type)),
-                array('title' => $langAttendance,
-                      'url' => "tc_attendance.php?course=$course_code",
-                      'icon' => 'fa-group',
-                      'level' => 'primary-label',
-                      'link-attrs' => "id=popupattendance1",
-                      'show' => is_active_tc_server('bbb', $course_id)),
-                array('title' => $langParticipate,
-                      'url' => "tcuserduration.php?course=$course_code",
-                      'icon' => 'fa-clock-o',
-                      'level' => 'primary-label')
-                ));
+            $tool_content .= action_bar([
+                [ 'title' => $langNewBBBSession,
+                  'url' => "$_SERVER[SCRIPT_NAME]?course=$course_code&amp;new=1",
+                  'icon' => 'fa-plus-circle',
+                  'button-class' => 'btn-success',
+                  'level' => 'primary-label',
+                  'show' => count($servers) > 1 ],
+                [ 'title' => $langNewBBBSession,
+                  'url' => "$_SERVER[SCRIPT_NAME]?course=$course_code&amp;add=1&amp;tc_type=$tc_server_type",
+                  'icon' => 'fa-plus-circle',
+                  'button-class' => 'btn-success',
+                  'level' => 'primary-label',
+                  'show' => !empty($tc_server_type) ],
+                [ 'title' => $langActivateParticipation,
+                  'url' => "tc_attendance.php?course=$course_code",
+                  'icon' => 'fa-group',
+                  'level' => 'primary-label',
+                  'link-attrs' => "id=popupattendance1",
+                  'show' => is_active_tc_server('bbb', $course_id) ],
+                [ 'title' => $langParticipate,
+                  'url' => "tcuserduration.php?course=$course_code",
+                  'icon' => 'fa-clock-o',
+                  'level' => 'primary-label' ],
+                [ 'title' => $langUserDuration,
+                    'url' => "tcuserduration.php?course=$course_code&amp;per_user=true",
+                    'icon' => 'fa-clock-o',
+                    'level' => 'primary-label' ],
+            ]);
         }
     }
 } else {
     $tool_content .= action_bar(array(
                 array('title' => $langParticipate,
-                          'url' => "tcuserduration.php?course=$course_code&amp;u=true",
+                          'url' => "tcuserduration.php?course=$course_code&amp;u=$_SESSION[uid]",
                           'icon' => 'fa-clock-o',
                           'level' => 'primary-label')
                 ));
@@ -371,7 +375,12 @@ elseif(isset($_GET['choice']))
                 }
             } elseif ($serv->type == 'jitsi' or $serv->type == 'googlemeet') { // if tc server is `jitsi` or 'googlemeet'
                 header("Location: " . $serv->hostname . $sess->meeting_id);
-            }/* elseif ($tc_type == 'om') { // if tc server is `om`
+            } elseif ($serv->type == 'zoom') { // zoom
+                header("Location: " . $serv->hostname . 'j/'. $sess->meeting_id . '/?pwd=' . $sess->mod_pw);
+            } elseif ($serv->type == 'webex') { // webex
+                header("Location: " . $sess->meeting_id);
+            }
+            /* elseif ($tc_type == 'om') { // if tc server is `om`
                if (om_session_running($_GET['meeting_id']) == false) { // create meeting
                    create_om_meeting($_GET['title'],$_GET['meeting_id'],$_GET['record']);
                }
@@ -453,7 +462,11 @@ elseif(isset($_GET['choice']))
     }
 
     if ($tc_type == 'googlemeet') {
-        $options = preg_replace('/http(s|):\/\/meet.google.com\//', '', $_POST['google_meet_link']);
+        $options = $_POST['google_meet_link'];
+    } elseif ($tc_type == 'zoom') {
+        $options = "$_POST[zoom_link]";
+    } elseif ($tc_type == 'webex') {
+        $options = "$_POST[webex_link]";
     }
 
     $bbb_max_part_per_room = get_config('bbb_max_part_per_room', 0);

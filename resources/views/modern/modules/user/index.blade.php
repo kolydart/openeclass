@@ -93,7 +93,7 @@
             bStateSave: true,
             bProcessing: true,
             bServerSide: true,
-            sScrollX: true,
+            sScrollX: false,
             drawCallback: function(oSettings) {
                 tooltip_init();
                 popover_init();
@@ -193,8 +193,8 @@
 
         <div class="row rowMedium">
 
-            <div id="background-cheat-leftnav" class="col-xl-2 col-lg-3 col_sidebar_active"> 
-                <div class="d-none d-sm-block d-sm-none d-md-block d-md-none d-lg-block">
+            <div id="background-cheat-leftnav" class="col-xl-2 col-lg-3 col_sidebar_active d-flex justify-content-start align-items-strech ps-lg-0 pe-lg-3"> 
+                <div class="d-none d-sm-block d-sm-none d-md-block d-md-none d-lg-block ContentLeftNav">
                     @include('layouts.partials.sidebar',['is_editor' => $is_editor])
                 </div>
             </div>
@@ -240,28 +240,32 @@
                     </div>
                     @endif
  
-                    <table id='users_table_{{ $course_code }}' class='table-default w-100 ms-0'>
-                        <thead>
-                            <tr class="list-header">
-                                <th>{{ trans('langSurnameName') }}</th>
-                                <th class='text-center'>{{ trans('langRole') }}</th>
-                                <th class='text-center'>{{ trans('langGroup') }}</th>
-                                <th class='text-center' width='80'>{{ trans('langRegistrationDate') }}</th>
-                                <th class='text-center'>{!! icon('fa-cogs') !!}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <th></th>
-                                <th></th>
-                                <th></th>
-                                <th></th>
-                                <th></th>
-                            </tr>
-                        </tfoot>
-                    </table>
+                    <div class='col-12'>
+                        <div class='table-responsive'>
+                            <table id='users_table_{{ $course_code }}' class='table-default w-100 ms-0'>
+                                <thead>
+                                    <tr class="list-header">
+                                        <th>{{ trans('langSurnameName') }}</th>
+                                        <th class='text-center'>{{ trans('langRole') }}</th>
+                                        <th class='text-center'>{{ trans('langGroup') }}</th>
+                                        <th class='text-center' width='80'>{{ trans('langRegistrationDate') }}</th>
+                                        <th class='text-center'>{!! icon('fa-cogs') !!}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <th></th>
+                                        <th></th>
+                                        <th></th>
+                                        <th></th>
+                                        <th></th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
 
                 </div>
             </div>

@@ -44,12 +44,12 @@
                                 </div>
                             </div>
                         @else
-                        <div class='col-xxl-3 offset-xxl-9 col-xl-4 offset-xl-8 col-lg-4 offset-lg-8 col-md-8 offset-md-2 col-12 d-lg-flex justify-content-lg-end align-items-lg-end bg-transparent px-4 py-lg-0 py-4'>
+                        <div class='col-xxl-3 offset-xxl-9 col-xl-4 offset-xl-8 col-lg-4 offset-lg-8 col-md-8 offset-md-2 col-12 contentLoginMobile d-lg-flex justify-content-lg-end align-items-lg-end d-flex justify-content-center align-items-center bg-transparent px-4 py-lg-0 py-4'>
                             <div class='card-body p-0' style='z-index:2;'>
                                 <div class='card-header bg-transparent border-0 d-flex justify-content-lg-end justify-content-center p-0'>
-                                    <a class='text-uppercase TextSemiBold text-white small-text' href="{{$urlAppend}}main/login_form.php">
+                                    <a class='d-flex align-items-center text-uppercase TextSemiBold userLoginMobile small-text' href="{{$urlAppend}}main/login_form.php">
                                         <img class="UserLoginIcon2" src="{{ $urlAppend }}template/modern/img/user_login_2.svg"> 
-                                        {{ trans('langUserLogin') }}
+                                        <span class='ms-2 ms-lg-0 loginText'>{{ trans('langUserLogin') }}</span>
                                     </a>
                                 </div>
                                 
@@ -65,13 +65,15 @@
                                 <div class='col-12 d-flex justify-content-center homepage_intro-margin @if($warning) mt-3 @endif mb-3'>
                                     <div class="panel panel-default homepageIntroPanel w-100 border-0 shadow-none">
                                         <div class="panel-body blackBlueText bg-body @if(get_config('homepage_title')) NoBorderTop @else Borders @endif p-5">
-                                            {!! get_config('homepage_intro') !!}
+                                            @if(get_config('homepage_title'))
+                                                <p class='text-center fs-4 normalBlueText TextBold mb-5'>{!! get_config('homepage_title') !!}</p>
+                                            @endif
+                                            @if(get_config('homepage_intro'))
+                                                {!! get_config('homepage_intro') !!}
+                                            @endif
+                                        
                                         </div>
-                                        @if(get_config('homepage_title'))
-                                            <div class='panel-footer'>
-                                                <p class='text-center text-uppercase fs-6 TextExtraBold normalBlueText pb-4'> {!! get_config('homepage_title') !!}</p>
-                                            </div>
-                                        @endif
+                                       
                                     </div>
                                 </div>
                             @endif
@@ -462,14 +464,15 @@
                         @if(get_config('homepage_title') or get_config('homepage_intro'))
                             <div class='col-12 mt-3'>
                                 <div class="panel panel-default homepageIntroPanel w-100 border-0 shadow-none">
-                                    <div class="panel-body blackBlueText bg-body @if(get_config('homepage_title')) NoBorderTop @else Borders @endif">
-                                        {!! get_config('homepage_intro') !!}
+                                    <div class="panel-body blackBlueText bg-body @if(get_config('homepage_title')) NoBorderTop @else Borders @endif p-3">
+                                            @if(get_config('homepage_title'))
+                                                <p class='text-center fs-4 normalBlueText TextSemiBold mb-3'>{!! get_config('homepage_title') !!}</p>
+                                            @endif
+                                            @if(get_config('homepage_intro'))
+                                                {!! get_config('homepage_intro') !!}
+                                            @endif
                                     </div>
-                                    @if(get_config('homepage_title'))
-                                        <div class='panel-footer'>
-                                            <p class='text-center text-uppercase fs-6 TextExtraBold normalBlueText pb-4'> {!! get_config('homepage_title') !!}</p>
-                                        </div>
-                                    @endif
+                                
                                 </div>
                             </div>
                         @endif

@@ -1,9 +1,9 @@
 <?php
 /* ========================================================================
- * Open eClass 3.10
+ * Open eClass 3.14
  * E-learning and Course Management System
  * ========================================================================
- * Copyright 2003-2021  Greek Universities Network - GUnet
+ * Copyright 2003-2023  Greek Universities Network - GUnet
  * A full copyright notice can be read in "/info/copyright.txt".
  * For a full list of contributors, see "credits.txt".
  *
@@ -61,7 +61,7 @@ if (isset($_GET['eurId'])) {
     $exercise_question_ids = Database::get()->queryArray("SELECT DISTINCT question_id, q_position FROM exercise_answer_record WHERE eurid = ?d ORDER BY q_position", $eurid);
     if (!$exercise_user_record) {
         // No record matches with this exercise user record id
-        Session::flash('message',$langExerciseNotFound); 
+        Session::flash('message',$langExerciseNotFound);
         Session::flash('alert-class', 'alert-warning');
         redirect_to_home_page('modules/exercise/index.php?course='.$course_code);
     }
@@ -220,33 +220,53 @@ $showScore = $displayScore == 1
 
 $toolName = $langExercicesResult;
 
-if (isset($_REQUEST['unit'])) {
-    $tool_content .= action_bar([
-        [
-            'title' => $langBack,
-            'url' => "../units/index.php?course=$course_code&id=$_REQUEST[unit]",
-            'icon' => 'fa fa-reply',
-            'level' => 'primary-label'
-        ]
-    ]);
-} else {
-    $tool_content .= action_bar([
-        [
-            'title' => $langBack,
-            'url' => "results.php?course=$course_code&exerciseId=" . getIndirectReference($exercise_user_record->eid) . "'",
-            'icon' => 'fa fa-reply',
-            'level' => 'primary-label'
-        ]
-    ]);
-}
-
-$tool_content .= "<div class='col-sm-12'><div class='alert alert-info'>";
-if ($user) { // user details
-    $tool_content .= q($user->surname) . " " . q($user->givenname);
-    if ($user->am) {
-        $tool_content .= " ($langAm: " . q($user->am) . ")";
+if (!isset($_GET['pdf'])) {
+    if (isset($_REQUEST['unit'])) {
+        $tool_content .= action_bar([
+            [
+                'title' => $langDumpPDF,
+                'url' => "../units/view.php?course=$course_code&res_type=exercise_results&eurId=$eurid&unit=$_REQUEST[unit]&pdf=true",
+                'icon' => 'fa-file-pdf-o',
+                'level' => 'primary-label',
+                'button-class' => 'btn-success'
+            ],
+            [
+                'title' => $langBack,
+                'url' => "../units/index.php?course=$course_code&id=$_REQUEST[unit]",
+                'icon' => 'fa fa-reply',
+                'level' => 'primary-label'
+            ]
+        ]);
+    } else {
+        $tool_content .= action_bar([
+            [
+                'title' => $langDumpPDF,
+                'url' => "$_SERVER[SCRIPT_NAME]?course=$course_code&eurId=$eurid&pdf=true",
+                'icon' => 'fa-file-pdf-o',
+                'level' => 'primary-label',
+                'button-class' => 'btn-success'
+            ],
+            [
+                'title' => $langBack,
+                'url' => "results.php?course=$course_code&exerciseId=" . getIndirectReference($exercise_user_record->eid) . "'",
+                'icon' => 'fa fa-reply',
+                'level' => 'primary-label'
+            ]
+        ]);
     }
 }
+
+$tool_content .= "<div class='col-sm-12'><div class='card panelCard px-lg-4 py-lg-3'>";
+$tool_content .= "<div class='card-header border-0 bg-white d-flex justify-content-between align-items-center'>";
+if ($user) { // user details
+    $tool_content .= "<div class='text-uppercase normalColorBlueText TextBold fs-6'>" . q($user->surname) . " " . q($user->givenname);
+    if ($user->am) {
+        $tool_content .= " ($langAmShort: " . q($user->am) . ")";
+    }
+    $tool_content .= "</div>";
+}
+$tool_content .= "</div>";
+$tool_content .= "<div class='card-body'>";
 
 $message_range = '';
 $canonicalized_message_range = "<strong><span>$exercise_user_record->total_score</span> / $exercise_user_record->total_weighting</strong>";
@@ -256,21 +276,23 @@ if ($exerciseRange > 0) { // exercise grade range (if any)
 }
 
 if ($showScore) {
-    $tool_content .= "<h6>$langYourTotalScore: $canonicalized_message_range&nbsp;&nbsp;$message_range</h6>";
+    $tool_content .= "<p class='panel-title'>$langTotalScore: $canonicalized_message_range&nbsp;&nbsp;$message_range</p>";
 }
 $tool_content .= "
-    <h6>$langStart: <em>" . format_locale_date(strtotime($exercise_user_record->record_start_date), 'short') . "</em></h6>
-    <h6>$langDuration: <em>" . format_time_duration($exercise_user_record->time_duration) . "</em></h6>" .
-    ($user && $exerciseAttemptsAllowed ? "<h6>$langAttempt: <em>{$exercise_user_record->attempt}</em></h6>" : '') . "
-  </div></div>";
+    <p>$langStart: <em>" . format_locale_date(strtotime($exercise_user_record->record_start_date), 'short') . "</em>
+    $langDuration: <em>" . format_time_duration($exercise_user_record->time_duration) . "</em></p>" .
+    ($user && $exerciseAttemptsAllowed ? "<p>$langAttempt: <em>{$exercise_user_record->attempt}</em></p>" : '') . "
+  </div></div>
+</div>
+";
 
-$tool_content .= "<div class='col-sm-12'><div class='panel panel-default'>
-                      <div class='panel-heading'>
-                            <div class='panel-title'>" . q_math($exerciseTitle) . "</div>
+$tool_content .= "<div class='col-12 mt-4'><div class='card panelCard px-lg-4 py-lg-3'>
+                      <div class='card-header border-0 bg-white d-flex justify-content-between align-items-center'>
+                            <div class='text-uppercase normalColorBlueText TextBold fs-6'>" . q_math($exerciseTitle) . "</div>
                       </div>";
 
 if (!empty($exerciseDescription)) {
-    $tool_content .= "<div class='panel-body'>$exerciseDescription</div>";
+    $tool_content .= "<div class='card-body'>$exerciseDescription</div>";
 }
 
 $tool_content .= "</div></div>";
@@ -280,8 +302,8 @@ $tool_content .= "<div class='row margin-bottom-fat mt-3'>
 if ($is_editor && $exercise_user_record->attempt_status == ATTEMPT_PENDING) {
     $tool_content .= "
             <div class='btn-group btn-group-sm' style='float:right;'>
-                <a class='btn submitAdminBtn rounded-pill' id='all'>$langAllExercises</a>
-                <a class='btn cancelAdminBtn rounded-pill ms-1' id='ungraded'>$langAttemptPending</a>
+                <a class='btn submitAdminBtn' id='all'>$langAllExercises</a>
+                <a class='btn cancelAdminBtn ms-1' id='ungraded'>$langAttemptPending</a>
             </div>";
 }
 $tool_content .= "
@@ -326,19 +348,19 @@ if (count($exercise_question_ids) > 0) {
         $question_weight = Database::get()->querySingle("SELECT SUM(weight) AS weight FROM exercise_answer_record WHERE question_id = ?d AND eurid =?d", $row->question_id, $eurid)->weight;
         $question_graded = is_null($question_weight) ? FALSE : TRUE;
 
-        $tool_content .= "<div class='panel panel-admin mt-3'>";
-        $tool_content .= "<div class='panel-body Borders p-0'>";
+        
+        $tool_content .= "<div class='table-responsive'>";
         $tool_content .= "
-            <table class='table ".(($question_graded)? 'graded' : 'ungraded')." table-default mb-0'>
+            <table class='table ".(($question_graded)? 'graded' : 'ungraded')." table-default table-exercise mb-3'>
             <tr class='active'>
-              <td colspan='2'>
+              <td class='bgTheme' colspan='2'>
                 <strong><u>$langQuestion</u>: $i</strong>";
 
         if ($answerType == FREE_TEXT) {
             $choice = purify($choice);
             if (!empty($choice)) {
                 if (!$question_graded) {
-                    $tool_content .= " <small>(<span class='text-danger'>$langAnswerUngraded</span>) </small";
+                    $tool_content .= " <small>(<span class='text-danger'>$langAnswerUngraded</span>) </small>";
                 } else {
                     $tool_content .= " <small>($langGradebookGrade: <strong>$question_weight</strong></span>)</small>";
                 }
@@ -355,7 +377,7 @@ if (count($exercise_question_ids) > 0) {
                  $tool_content .= " <small>($langGradebookGrade: <strong>$qw_legend1 / $questionWeighting</strong></span>$qw_legend2)</small>";
              }
         }
-        $tool_content .= "<small class='help-block'>($questionType)</small>"; // question type
+        $tool_content .= "<small>($questionType)</small>"; // question type
         $tool_content .= "</td></tr>";
 
         $tool_content .= "<tr><td colspan='2'>";
@@ -451,7 +473,11 @@ if (count($exercise_question_ids) > 0) {
                                 // increments total score
                                 // adds the word in green at the end of the string
                                 $answer .= '<strong>' . q($choice[$j]) . '</strong>';
-                                $icon = "<span class='fa fa-check text-success'></span>";
+                                if (isset($_GET['pdf'])) {
+                                    $icon = "<input type='checkbox' checked='checked'>";
+                                } else {
+                                    $icon = "<span class='fa fa-check text-success'></span>";
+                                }
                             }
                             // else if the word entered is not the same as the one defined by the professor
                             elseif ($choice[$j] !== '') {
@@ -516,7 +542,11 @@ if (count($exercise_question_ids) > 0) {
                                 }
                                 // adds the word in green at the end of the string
                                 $answer .= '<strong>' . q($possible_answer[$choice[$j]]) . '</strong>';
-                                $icon = "<span class='fa fa-check text-success'></span>";
+                                if (isset($_GET['pdf'])) {
+                                    $icon = "<input type='checkbox' checked='checked'>";
+                                } else {
+                                    $icon = "<span class='fa fa-check text-success'></span>";
+                                }
                             }  else { // wrong answer
                                 if (isset($possible_answer[$choice[$j]])) { // if we have chosen something
                                     // adds the word in red at the end of the string, and strikes it
@@ -542,13 +572,16 @@ if (count($exercise_question_ids) > 0) {
                                 $grade = $answerWeighting;
                                 $choice[$answerId] = q($matching[$choice[$answerId]]);
                                 $icon = "<span class='fa fa-check text-success'></span>";
+                                $pdf_icon = "✓";
                             } elseif (!$thisChoice) {
                                 $choice[$answerId] = '<del class="text-danger">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</del>';
                                 $icon = "<span class='fa fa-times text-danger'></span>";
+                                $pdf_icon = "✓";
                             } else {
                                 $choice[$answerId] = "<span class='text-danger'><del>" .
                                     q($matching[$choice[$answerId]]) . "</del></span>";
                                 $icon = "<span class='fa fa-times text-danger'></span>";
+                                $pdf_icon = "✓";
                             }
                         } else {
                             $icon = '';
@@ -583,6 +616,7 @@ if (count($exercise_question_ids) > 0) {
                         $answer_icon  = '';
                         if ($studentChoice) {
                             $student_choice_icon = "fa fa-fw fa-check-square-o help-block";
+                            $pdf_student_choice_icon = "<input type='checkbox' checked='checked'>";
                             $style = '';
                             if ($answerCorrect) {
                                 $answer_icon = "fa fa-check text-success";
@@ -591,10 +625,16 @@ if (count($exercise_question_ids) > 0) {
                             }
                         } else {
                             $student_choice_icon = "fa fa-fw fa-square-o help-block";
+                            $pdf_student_choice_icon = "<input type='checkbox'>";
                             $style = "visibility: hidden;";
                         }
-                        $tool_content .= "<span class='$student_choice_icon'></span>&nbsp;&nbsp;";
-                        $tool_content .= "<span style='$style' class='$answer_icon'></span>";
+                        if (isset($_GET['pdf'])) {
+                            $tool_content .= "<span>$pdf_student_choice_icon</span>";
+                        } else {
+                            $tool_content .= "<span class='$student_choice_icon'></span>&nbsp;&nbsp;";
+                            $tool_content .= "<span style='$style' class='$answer_icon'></span>";
+                        }
+
                         $tool_content .= "</td>";
                         $tool_content .= "<td>" . standard_text_escape($answer);
                         if ($answerCorrect) {
@@ -623,8 +663,8 @@ if (count($exercise_question_ids) > 0) {
         }
 
         if (!is_null($questionFeedback)) {
-            $tool_content .= "<tr><td colspan='2'>";
-            $tool_content .= "<div style='margin-top: 10px;'><strong>$langQuestionFeedback:</strong><br>" . standard_text_escape($questionFeedback) . "</div>";
+            $tool_content .= "<tr style='background-color:#fffbe3'><td colspan='2'>";
+            $tool_content .= "<div><strong>$langQuestionFeedback:</strong><br>" . standard_text_escape($questionFeedback) . "</div>";
             $tool_content .= "</td></tr>";
         }
 
@@ -666,7 +706,7 @@ if (count($exercise_question_ids) > 0) {
         }
 
         $tool_content .= "</table>";
-        $tool_content .= "</div></div>";
+        $tool_content .= "</div>";
 
         $totalScore += $questionScore;
         $totalWeighting += $questionWeighting;
@@ -705,7 +745,7 @@ if ($regrade) {
         $max_arid = Database::get()->querySingle("SELECT MAX(answer_record_id) AS max_arid FROM exercise_answer_record WHERE eurid=?d AND question_id=?d", $eurid, $d)->max_arid;
         Database::get()->querySingle("DELETE FROM exercise_answer_record WHERE eurid=?d AND question_id=?d AND answer_record_id != ?d", $eurid, $d, $max_arid);
     }
-    Session::flash('message',$langNewScoreRecorded); 
+    Session::flash('message',$langNewScoreRecorded);
     Session::flash('alert-class', 'alert-success');
     if ($ajax_regrade) {
         echo json_encode(['result' => 'ok']);
@@ -736,8 +776,8 @@ if ($is_editor and ($totalScore != $oldScore or $totalWeighting != $oldWeighting
 
              Session::flash('message',$langScoreDiffers .
              "<form action='exercise_result.php?course=$course_code&amp;eurId=$eurid' method='post'>
-                 <button class='btn submitAdminBtn' type='submit' name='regrade' value='true'>$langRegrade</button>
-              </form>"); 
+                 <button class='btn submitAdminBtn mt-3' type='submit' name='regrade' value='true'>$langRegrade</button>
+              </form>");
             Session::flash('alert-class', 'alert-warning');
     }
 }
@@ -747,8 +787,63 @@ if ($checking) {
     exit;
 }
 
-if ($is_editor) {
+if (!isset($_GET['pdf']) and $is_editor) {
     $tool_content .= "<div class='col-12 d-flex justify-content-center align-items-center mt-5'><a class='btn submitAdminBtn' href='index.php' id='submitButton'><span id='text_submit' class='vsmall-text'>$langSubmit</span></a></div>";
 }
 
-draw($tool_content, 2, null, $head_content);
+if (isset($_GET['pdf'])) {
+    $pdf_content = "
+        <!DOCTYPE html>
+        <html lang='el'>
+        <head>
+          <meta charset='utf-8'>
+          <title>" . q("$currentCourseName - $langExercicesResult") . "</title>
+          <style>
+            * { font-family: 'opensans'; }
+            body { font-family: 'opensans'; font-size: 10pt; }
+            small, .small { font-size: 8pt; }
+            h1, h2, h3, h4 { font-family: 'roboto'; margin: .8em 0 0; }
+            h1 { font-size: 16pt; }
+            h2 { font-size: 12pt; border-bottom: 1px solid black; }
+            h3 { font-size: 10pt; color: #158; border-bottom: 1px solid #158; }            
+            th { text-align: left; border-bottom: 1px solid #999; }
+            td { text-align: left; }
+          </style>
+        </head>
+        <body>" . get_platform_logo() .
+        "<h2> " . get_config('site_name') . " - " . q($currentCourseName) . "</h2>
+        <h2> " . q($langExercicesResult) . "</h2>";
+
+    $pdf_content .= $tool_content;
+    $pdf_content .= "</body></html>";
+
+    $defaultConfig = (new Mpdf\Config\ConfigVariables())->getDefaults();
+    $fontDirs = $defaultConfig['fontDir'];
+    $defaultFontConfig = (new Mpdf\Config\FontVariables())->getDefaults();
+    $fontData = $defaultFontConfig['fontdata'];
+
+    $mpdf = new Mpdf\Mpdf([
+        'tempDir' => _MPDF_TEMP_PATH,
+        'fontDir' => array_merge($fontDirs, [ $webDir . '/template/default/fonts' ]),
+        'fontdata' => $fontData + [
+                'opensans' => [
+                    'R' => 'open-sans-v13-greek_cyrillic_latin_greek-ext-regular.ttf',
+                    'B' => 'open-sans-v13-greek_cyrillic_latin_greek-ext-700.ttf',
+                    'I' => 'open-sans-v13-greek_cyrillic_latin_greek-ext-italic.ttf',
+                    'BI' => 'open-sans-v13-greek_cyrillic_latin_greek-ext-700italic.ttf'
+                ],
+                'roboto' => [
+                    'R' => 'roboto-v15-latin_greek_cyrillic_greek-ext-regular.ttf',
+                    'I' => 'roboto-v15-latin_greek_cyrillic_greek-ext-italic.ttf',
+                ]
+            ]
+    ]);
+
+    $mpdf->setFooter('{DATE j-n-Y} || {PAGENO} / {nb}');
+    $mpdf->SetCreator(course_id_to_prof($course_id));
+    $mpdf->SetAuthor(course_id_to_prof($course_id));
+    $mpdf->WriteHTML($pdf_content);
+    $mpdf->Output("$course_code exercise_results.pdf", 'I'); // 'D' or 'I' for download / inline display
+} else {
+    draw($tool_content, 2, null, $head_content);
+}

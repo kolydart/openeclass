@@ -191,14 +191,15 @@ function register_user_presences($attendance_id, $actID) {
         }
         $tool_content .= "</tbody></table>";
         $tool_content .= "<div class='form-group'>";
-        $tool_content .= "<div class='col-xs-12'>" .
+        $tool_content .= "<div class='col-12 d-flex justify-content-center align-items-center mt-5'>" .
                         form_buttons(array(
                             array(
+                                'class' => 'submitAdminBtn',
                                 'text' => $langAttendanceBooking,
                                 'name' => 'bookUsersToAct',
                                 'value'=> $langAttendanceBooking
                                 ))).
-                "<a href='index.php?course=$course_code&amp;attendance_id=" . $attendance_id . "' class='btn cancelAdminBtn'>$langCancel</a>";
+                "<a href='index.php?course=$course_code&amp;attendance_id=" . $attendance_id . "' class='btn cancelAdminBtn ms-2'>$langCancel</a>";
         $tool_content .= "</div></div>";
         $tool_content .= generate_csrf_token_form_field() ."</form></div></div>";
         $tool_content .= "</tbody></table>";
@@ -255,10 +256,7 @@ function display_attendance_activities($attendance_id) {
                       'icon' => 'fa-cog'),
                 array('title' => "$langExport",
                         'url' => "dumpattendancebook.php?course=$course_code&amp;attendance_id=$attendance_id_ind",
-                    'icon' => 'fa-file-excel-o'),
-                array('title' => "$langExport ($langcsvenc2)",
-                        'url' => "dumpattendancebook.php?course=$course_code&amp;attendance_id=$attendance_id_ind&amp;enc=UTF-8",
-                        'icon' => 'fa-file-excel-o'),
+                    'icon' => 'fa-file-excel-o')
             ),
             true
         );
@@ -1172,14 +1170,14 @@ function user_attendance_settings($attendance_id) {
                                     </tr>
                                     <tr>
                                       <td>
-                                        <select class='form-select h-100' id='users_box' size='10' multiple></select>
+                                        <select class='form-select h-100 rounded-0' id='users_box' size='10' multiple></select>
                                       </td>
                                       <td class='text-center'>
                                         <input class='btn-outline-primary rounded-pill h-30px' type='button' onClick=\"move('users_box','participants_box')\" value='   &gt;&gt;   ' /><br />
                                         <input class='btn-outline-primary rounded-pill h-30px mt-2' type='button' onClick=\"move('participants_box','users_box')\" value='   &lt;&lt;   ' />
                                       </td>
                                       <td width='40%'>
-                                        <select class='form-select h-100' id='participants_box' name='specific[]' size='10' multiple></select>
+                                        <select class='form-select h-100 rounded-0' id='participants_box' name='specific[]' size='10' multiple></select>
                                       </td>
                                     </tr>
                                 </table>

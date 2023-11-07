@@ -42,7 +42,6 @@ require_once 'include/sendMail.inc.php';
 require_once 'include/log.class.php';
 require_once 'modules/tags/moduleElement.class.php';
 require_once 'modules/admin/extconfig/externals.php';
-require_once 'include/lib/csv.class.php';
 require_once 'modules/plagiarism/plagiarism.php';
 require_once 'modules/progress/AssignmentEvent.php';
 require_once 'modules/analytics/AssignmentAnalyticsEvent.php';
@@ -1563,7 +1562,7 @@ function submit_work($id, $on_behalf_of = null) {
                     if ($errorsComment !== '') {
                         $comment .= '<br /><br />'.$errorsComment;
                     }
-                    submit_grade_comments(array(
+                    submit_grade_comments([
                         'assignment' => $id,
                         'submission' => $sid,
                         'grade' => $grade,
@@ -1571,12 +1570,20 @@ function submit_work($id, $on_behalf_of = null) {
                         'send_email' => false,
                         'auto_judge_scenarios_output' => $auto_judge_scenarios_output,
                         'preventUiAlterations' => true,
-                    ));
+                    ]);
 
             } else if ($auto_judge && $ext !== $langExt[$lang]) {
                 if($lang == null) { die('Auto Judge is enabled but no language is selected'); }
                 if($langExt[$lang] == null) { die('An unsupported language was selected. Perhaps platform-wide auto judge settings have been changed?'); }
-                submit_grade_comments($id, $sid, 0, sprintf($langAutoJudgeInvalidFileType, $langExt[$lang], $ext), false, null, true);
+                submit_grade_comments([
+                    'assignment' => $id,
+                    'submission' => $sid,
+                    'grade' => 0,
+                    'comments' => sprintf($langAutoJudgeInvalidFileType, $langExt[$lang], $ext),
+                    'send_email' => false,
+                    'auto_judge_scenarios_output' => null,
+                    'preventUiAlterations' => true,
+                ]);
             }
         }
         // End Auto-judge
@@ -2459,13 +2466,13 @@ function new_assignment() {
                             </tr>
                             <tr>
                               <td>
-                                <select class='form-select h-100' id='assign_box' size='10' multiple></select>
+                                <select class='form-select h-100 rounded-0' id='assign_box' size='10' multiple></select>
                               </td>
                               <td class='text-center'>
                                 <input class='btn btn-outline-primary btn-sm rounded-pill'type='button' onClick=\"move('assign_box','assignee_box')\" value='   &gt;&gt;   ' /><br /><input class='mt-2 btn btn-outline-primary btn-sm h-30px rounded-pill' type='button' onClick=\"move('assignee_box','assign_box')\" value='   &lt;&lt;   ' />
                               </td>
                               <td width='40%'>
-                                <select class='form-select h-100' id='assignee_box' name='ingroup[]' size='10' multiple></select>
+                                <select class='form-select h-100 rounded-0' id='assignee_box' name='ingroup[]' size='10' multiple></select>
                               </td>
                             </tr>
                         </table>
@@ -3369,7 +3376,7 @@ function show_edit_assignment($id) {
 						</div>
                     </div>
                     <div class='input-append date".(Session::getError('WorkEnd_review') ? " has-error" : "")."' id='enddatepicker' data-date='$WorkEnd_review' data-date-format='dd-mm-yyyy'>
-                        <label for='exerciseEndDate' class='col-sm-6 control-label-notes'>$langReviewEn</label>
+                        <label for='exerciseEndDate' class='col-sm-6 control-label-notes'>$langReviewEnd:</label>
                         <div class='col-sm-12'>
                            <div class='input-group'>
                                <span class='input-group-addon'>
@@ -3526,7 +3533,7 @@ function show_edit_assignment($id) {
                             </tr>
                             <tr>
                               <td>
-                                <select class='form-select h-100' id='assign_box' size='10' multiple>
+                                <select class='form-select h-100 rounded-0' id='assign_box' size='10' multiple>
                                 ".((isset($unassigned_options)) ? $unassigned_options : '')."
                                 </select>
                               </td>
@@ -3534,7 +3541,7 @@ function show_edit_assignment($id) {
                                 <input class='btn btn-outline-primary btn-sm rounded-pill' type='button' onClick=\"move('assign_box','assignee_box')\" value='   &gt;&gt;   ' /><br /><input class='btn btn-outline-primary btn-sm rounded-pill mt-2' type='button' onClick=\"move('assignee_box','assign_box')\" value='   &lt;&lt;   ' />
                               </td>
                               <td>
-                                <select class='form-select h-100' id='assignee_box' name='ingroup[]' size='10' multiple>
+                                <select class='form-select h-100 rounded-0' id='assignee_box' name='ingroup[]' size='10' multiple>
                                 ".((isset($assignee_options)) ? $assignee_options : '')."
                                 </select>
                               </td>
@@ -3971,16 +3978,16 @@ function show_student_assignment($id) {
                 if ($row->reviews_per_assignment < $count_of_assign && $rows) {
                     show_assignment_review($id);
                 } elseif ($row->reviews_per_assignment < $count_of_assign && empty($rows)) {
-                    $tool_content .= "<div class='col-12'><div class='alert alert-warning'>$langNoPeerReview</div></div>";
+                    Session::flash('message', $langPendingPeerSubmissions);
+                    Session::flash('alert-class', 'alert-warning');
                 } elseif ($row->reviews_per_assignment > $count_of_assign) {
-                    $tool_content .= "<div class='col-12'><div class='alert alert-warning'>$langNoPeerReview</div></div>";
+                    Session::flash('message', $langNoPeerReview);
+                    Session::flash('alert-class', 'alert-warning');
                 }
-            }
-            else
-            {
+            } else {
                 //auto to mnm emfanizetai mexri kai thn hmeromhnia kai wra tou start_date_review
-                $start_date_review = format_locale_date(strtotime($row->start_date_review), 'short'); //hmeromhnia enarkshs aksiologhshs
-                $tool_content .= "<div class='col-12'><div class='alert alert-warning'>$langPendingPeerSubmissions</div></div>";
+                Session::flash('message', $langPendingPeerSubmissions);
+                Session::flash('alert-class', 'alert-warning');
             }
         }
     } else {
@@ -4137,7 +4144,7 @@ function show_assignment_review($id, $display_graph_results = false) {
                 </table>
             </div>
             <div class='form-group'>
-              <div class='col-xs-12'>
+              <div class='col-12'>
                  <div class='checkbox'>
                    <label>
                      <input type='checkbox' value='1' name='send_email' checked> $m[email_users]
@@ -4228,7 +4235,6 @@ function show_submission_form($id, $user_group_info, $on_behalf_of=false, $submi
                             </div>
                         </div>";
             } else {
-                //Session::Messages($m['NoneWorkGroupNoSubmission'], 'alert-danger');
                 Session::flash('message',$m['NoneWorkGroupNoSubmission']);
                 Session::flash('alert-class', 'alert-danger');
                 redirect_to_home_page('modules/work/index.php?course='.$course_code.'&id='.$id);
@@ -4246,7 +4252,6 @@ function show_submission_form($id, $user_group_info, $on_behalf_of=false, $submi
                             </div>
                         </div>";
             } else {
-               // Session::Messages($m['NoneWorkUserNoSubmission'], 'alert-danger');
                 Session::flash('message',$m['NoneWorkUserNoSubmission']);
                 Session::flash('alert-class', 'alert-danger');
                 redirect_to_home_page('modules/work/index.php?course='.$course_code.'&id='.$id);
@@ -4311,8 +4316,8 @@ function show_submission_form($id, $user_group_info, $on_behalf_of=false, $submi
                 $label = sprintf($langWorkFileLimit, $assignment->max_submissions);
                 $maxFiles = $assignment->max_submissions;
                 $inputName = 'userfile[]';
-                $moreButton = "<div class='float-end'>
-                                 <button class='btn submitAdminBtn moreFiles'>
+                $moreButton = "<div>
+                                 <button class='btn submitAdminBtn btn-sm moreFiles'>
                                    <span class='fa fa-plus'></span>
                                  </button>
                                </div>";
@@ -4611,18 +4616,18 @@ function assignment_details($id, $row, $x =false) {
 
     $moduleTag = new ModuleElement($id);
     $tool_content .= "
-    <div class='col-sm-12'>
-    <div class='panel panel-action-btn-primary'>
-        <div class='panel-heading'>
-            <div class='panel-title'>
+    <div class='col-12'>
+    <div class='card panelCard px-lg-4 py-lg-3'>
+        <div class='card-header border-0 bg-white d-flex justify-content-between align-items-center'>
+            <div class='text-uppercase normalColorBlueText TextBold fs-6'>
                 $m[WorkInfo] &nbsp;
                 ". (($is_editor) ?
                 "<a href='{$urlServer}modules/work/index.php?course=$course_code&amp;id=$id&amp;choice=edit'>
-                    <span class='fa fa-edit text-white' title='' data-bs-toggle='tooltip' data-original-title='$langEditChange'></span>
+                    <span class='fa fa-edit' title='' data-bs-toggle='tooltip' data-bs-original-title='$langEditChange'></span>
                 </a>" : "")."
             </div>
         </div>
-        <div class='panel-body ps-3 pb-3 pt-3 pe-3'>
+        <div class='card-body'>
             <div class='row p-2 margin-bottom-fat'>
                 <div class='col-sm-4'>
                     <strong class='control-label-notes'>$langTitle:</strong>
@@ -4788,9 +4793,9 @@ function show_assignment($id, $display_graph_results = false) {
     $langGraphResults, $m, $course_code, $works_url, $course_id, $langDownloadToPDF, $langGradedAt,
     $langQuestionView, $langAmShort, $langSGradebookBook, $langDeleteSubmission, $urlServer, $langTransferGrades,
     $langAutoJudgeShowWorkResultRpt, $langSurnameName, $langPlagiarismCheck, $langProgress, $langFileName,
-    $langPeerReviewImpossible, $langPeerReviewGrade, $langPeerReviewCompletedByStudent, $autojudge,
-    $langPeerReviewPendingByStudent, $langPeerReviewMissingByStudent, $langAssignmentDistribution,
-    $langQuestionCorrectionTitle2, $langFrom2;
+    $langPeerReviewImpossible, $langPeerReviewGrade, $langPeerReviewCompletedByStudent,
+    $autojudge, $langPeerReviewPendingByStudent, $langPeerReviewMissingByStudent, $langAssignmentDistribution,
+    $langQuestionCorrectionTitle2, $langFrom2, $langOpenCoursesFiles;
 
     // transfer grades in peer review assignment
     $head_content .= "<script type='text/javascript'>
@@ -4832,22 +4837,23 @@ function show_assignment($id, $display_graph_results = false) {
 
 	$cdate = date('Y-m-d H:i:s');
     $count_of_ass = countSubmissions($id);
-	//to button anathesh tha emfanizetai sto xroniko diasthma apo deadline - start_date_review
-        if (($assign->grading_type == ASSIGNMENT_PEER_REVIEW_GRADE && $cdate > $assign->deadline && $cdate < $assign->start_date_review)) {
-            if ($assign->reviews_per_assignment < $count_of_ass) {
-                $tool_content .= " <form class='form-horizontal' role='form' method='post' action='index.php?course=$course_code' enctype='multipart/form-data'>
-                               <input type='hidden' name='assign' value='$id'>
-                               <div class='form-group'>
-                                    <div class='float-end'>
-                                        <input class='btn submitAdminBtn' type='submit' name='ass_review' value='$langAssignmentDistribution'>
-                                    </div>
-                               </div>
-                               </form>";
-            } else {
-                Session::flash('message',$langPeerReviewImpossible);
-                Session::flash('alert-class', 'alert-warning');
-            }
+    //to button anathesh tha emfanizetai sto xroniko diasthma apo deadline assignment
+    if ($assign->grading_type == ASSIGNMENT_PEER_REVIEW_GRADE && $cdate > $assign->deadline) {
+        if ($assign->reviews_per_assignment < $count_of_ass) {
+            $tool_content .= " <form class='form-horizontal' role='form' method='post' action='index.php?course=$course_code' enctype='multipart/form-data'>
+                           <input type='hidden' name='assign' value='$id'>
+                           <div class='form-group'>
+                                <div class='text-center'>
+                                    <input class='btn submitAdminBtn' type='submit' name='ass_review' value='$langAssignmentDistribution'>
+                                </div>
+                           </div>
+                           </form>";
+        } else {
+            Session::flash('message', $langPeerReviewImpossible);
+            Session::flash('alert-class', 'alert-warning');
         }
+    }
+
     $rev = (@($_REQUEST['rev'] == 1)) ? 'DESC' : 'ASC';
     if (isset($_REQUEST['sort'])) {
         if ($_REQUEST['sort'] == 'date') {
@@ -4898,8 +4904,8 @@ function show_assignment($id, $display_graph_results = false) {
             $tool_content .= "<form action='{$urlServer}modules/work/index.php?course=$course_code' method='post' class='form-inline'>
                 <input type='hidden' name='grades_id' value='$id' />
                 <br>
-                <div class='margin-bottom-thin lightColor rounded-pill p-2 text-center'>
-                    <strong class='fw-bold'>$langSubmissions:</strong>&nbsp; $count_of_assignments";
+                <div class='margin-bottom-thin lightColor Borders p-2 text-center'>
+                    <strong class='fw-bold normalColorBlueText'>$langSubmissions:</strong>&nbsp; $count_of_assignments";
                 // button for transferring student peer review grades to teacher grades
                 if ($assign->grading_type == ASSIGNMENT_PEER_REVIEW_GRADE && ($count_of_ass > 0)) {
                     $tool_content .= "<div class='text-end' style='margin-bottom: 15px;'><a class='btn submitAdminBtn' href='$_SERVER[SCRIPT_NAME]?course=$course_code' id='transfer_grades'>$langTransferGrades</a></div>";
@@ -4913,11 +4919,14 @@ function show_assignment($id, $display_graph_results = false) {
                 <tr class='list-header'>
                 <th class='count-col'>&nbsp;</th>";
                 sort_link($langSurnameName, 'username', 'class="user-col"');
-                if ($assign->submission_type)  {
+                if ($assign->submission_type == 1)  {
                     $tool_content .= "<th class='text-center'>$langWorkOnlineText</th>";
+                } elseif ($assign->submission_type == 2) {
+                    $tool_content .= "<th class='text-center'>$langOpenCoursesFiles</th>";
                 } else {
                     $tool_content .= "<th class='text-center'>$langFileName</th>";
                 }
+
                 sort_link($m['sub_date'], 'date', 'class="date-col"');
                 if ($assign->grading_type == ASSIGNMENT_PEER_REVIEW_GRADE) { //neo pedio vathmos aksiologhshs mono gia peer review
                     sort_link($langPeerReviewGrade, '');
@@ -4946,8 +4955,7 @@ function show_assignment($id, $display_graph_results = false) {
                 if ($assign->grading_type == ASSIGNMENT_PEER_REVIEW_GRADE) {
                     $grade_review_field = "<input class='form-control' type='text' value='' name='grade_review' maxlength='4' size='3' disabled>";
                     $condition ='';
-                    $rows = Database::get()->queryArray("SELECT * FROM assignment_grading_review
-                        WHERE assignment_id = ?d ", $id);
+                    $rows = Database::get()->queryArray("SELECT * FROM assignment_grading_review WHERE assignment_id = ?d ", $id);
                     if ($count_of_assignments > $assign->reviews_per_assignment && $rows) {
                         //status aksiologhshs kathe foithth
                         if ( $cdate > $assign->start_date_review){
@@ -5103,7 +5111,7 @@ function show_assignment($id, $display_graph_results = false) {
                 $comments = '';
                 //emfanizei pote vathmologhthhke
                 if ($row->grade != '') { // grade submission date
-                    $label = "<h6>($langGradedAt " .format_locale_date(strtotime($row->grade_submission_date), 'short', false) . ")</h6>";
+                    $label = "<p>($langGradedAt " .format_locale_date(strtotime($row->grade_submission_date), 'short', false) . ")</p>";
                 }
                 // professor comments
                 if ($row->grade_comments or $row->grade_comments_filename) {
@@ -5174,7 +5182,7 @@ function show_assignment($id, $display_graph_results = false) {
             $tool_content .= "</tbody></table></div>";
             $tool_content .= "
                 <div class='form-group'>
-                    <div class='col-xs-12'>
+                    <div class='col-12'>
                         <div class='checkbox'>
                           <label>
                             <input type='checkbox' value='1' name='send_email' checked> $langMailToUsers
@@ -5307,7 +5315,7 @@ function show_non_submitted($id) {
                 $num_of_submissions = sprintf("$m[more_non_submissions]", $num_results);
             }
                 $tool_content .= "
-                            <p><div class='sub_title1 bg-light p-2 text-center fw-bold'>$m[WorkUserNoSubmission]:</div><p>
+                            <p><div class='sub_title1 bg-light p-2 text-center fw-bold Borders normalColorBlueText'>$m[WorkUserNoSubmission]:</div><p>
                             <p class='text-center'>$num_of_submissions</p>
                             <div class='row'><div class='col-sm-12'>
                             <div class='table-responsive mt-0'>
@@ -5411,7 +5419,7 @@ function show_student_assignments() {
             $add_eportfolio_res_th = "";
         }
 
-       
+
         $tool_content .= "
             <div class='col-sm-12'>
             <div class='table-responsive'>
@@ -5587,7 +5595,7 @@ function show_assignments() {
                   'level' => 'primary-label'),
             ),false);
     if (count($result) > 0) {
-        
+
         $tool_content .= "
             <div class='col-sm-12'>
                     <div class='table-responsive'>
@@ -5602,7 +5610,6 @@ function show_assignments() {
                     </tr>
                     </thead>
                     <tbody>";
-        $index = 0;
         $sort_id = 0;
         foreach ($result as $key => $row) {
             $sort_id++;
@@ -5618,6 +5625,14 @@ function show_assignments() {
                 }
                 $lock_description .= "</ul>";
                 $exclamation_icon = "&nbsp;&nbsp;<span class='fa fa-exclamation-triangle space-after-icon' data-bs-toggle='tooltip' data-bs-placement='right' data-bs-html='true' data-title='$lock_description' data-bs-original-title='$lock_description'></span>";
+            }
+
+            if ($row->assign_to_specific == 1) {
+                $assign_to_users_message = "<small class='help-block'>$m[WorkAssignTo]: $m[WorkToUser]</small>";
+            } else if ($row->assign_to_specific == 2) {
+                $assign_to_users_message = "<small class='help-block'>$m[WorkAssignTo]: $m[WorkToGroup]</small>";
+            } else {
+                $assign_to_users_message = '';
             }
 
             // Check if assignment contains submissions
@@ -5649,6 +5664,7 @@ function show_assignments() {
             $tool_content .= "<td><a href='$_SERVER[SCRIPT_NAME]?course=$course_code&amp;id={$row->id}'>" . q($row->title) . "</a>
                                 $exclamation_icon
                                 <br><small class='text-muted'>".($row->group_submissions? $m['group_work'] : $m['user_work'])."</small>
+                                $assign_to_users_message
                             <td class='text-center'>$num_submitted</td>
                             <td class='text-center'>$num_ungraded</td>
                             <td class='text-center' data-sort='$sort_id'>$deadline";
@@ -5666,11 +5682,9 @@ function show_assignments() {
                     array('title' => $langEditChange,
                           'url' => "$_SERVER[SCRIPT_NAME]?course=$course_code&amp;id=$row->id&amp;choice=edit",
                           'icon' => 'fa-edit'),
-                    array(
-                        'title' => $m['WorkUserGroupNoSubmission'],
-                        'url' => "{$urlAppend}modules/work/index.php?course=$course_code&amp;id=$row->id&amp;disp_non_submitted=true",
-                        'icon' => 'fa-minus-square'
-                    ),
+                    array('title' => $m['WorkUserGroupNoSubmission'],
+                          'url' => "{$urlAppend}modules/work/index.php?course=$course_code&amp;id=$row->id&amp;disp_non_submitted=true",
+                          'icon' => 'fa-minus-square'),
                     array('title' => $row->active == 1 ? $langDeactivate: $langActivate,
                           'url' => $row->active == 1 ? "$_SERVER[SCRIPT_NAME]?course=$course_code&amp;choice=disable&amp;id=$row->id" : "$_SERVER[SCRIPT_NAME]?course=$course_code&amp;choice=enable&amp;id=$row->id",
                           'icon' => $row->active == 1 ? 'fa-eye-slash': 'fa-eye'),
@@ -5680,12 +5694,11 @@ function show_assignments() {
                           'confirm' => "$langWarnForSubmissions $langDelSure",
                           'show' => $num_submitted > 0),
                     array('title' => $langDelete,
-                            'url' => "$_SERVER[SCRIPT_NAME]?course=$course_code&amp;id=$row->id&amp;choice=do_delete",
-                            'icon' => 'fa-times',
-                            'class' => 'delete',
-                            'confirm' => $langWorksDelConfirm))).
+                          'url' => "$_SERVER[SCRIPT_NAME]?course=$course_code&amp;id=$row->id&amp;choice=do_delete",
+                          'icon' => 'fa-times',
+                          'class' => 'delete',
+                          'confirm' => $langWorksDelConfirm))).
                    "</td></tr>";
-            $index++;
         }
         $tool_content .= '</tbody></table></div></div>';
     } else {
@@ -5826,13 +5839,6 @@ function submit_grade_comments($args) {
 
 /**
  * @brief submit grade and comment for student submission
- * @global type $langGrades
- * @global type $course_id
- * @global type $langTheField
- * @global type $langGradebookGrade
- * @global type $course_code
- * @global type $langFormErrors
- * @global type $workPath
  * @param type $args
  */
 function submit_grade_reviews($args) {
@@ -5865,12 +5871,9 @@ function submit_grade_reviews($args) {
                                     SET grade = ?f, comments =?s, date_submit = NOW(), rubric_scales = ?s WHERE id = ?d
                                   ", $grade, $comment, $grade_rubric, $sid);
 
-
-		//edw tha valoume ena if mexri thn hmeromhnia lhkshs review .otan perasei h hmera tha kanoume update ton vathmo pou vghke apo to ms sto pedio bathmos
-		$cdate = date('Y-m-d H:i:s');
-        //Session::Messages($langGrades, 'alert-success');
-        Session::flash('message',$langGrades);
+        Session::flash('message', $langGrades);
         Session::flash('alert-class', 'alert-success');
+
         if (isset($_REQUEST['unit'])) {
             redirect_to_home_page("modules/units/index.php?course=$course_code&id=$_REQUEST[unit]");
         } else {
@@ -5887,45 +5890,48 @@ function submit_grade_reviews($args) {
  * @brief submit reviews per assignment
  */
 function submit_review_per_ass($id) {
-	global $course_code;
+	global $course_code, $langNoPeerReviewMultipleFiles;
 
 	$assignment = Database::get()->querySingle("SELECT * FROM assignment WHERE id = ?d ",$id);
 	$assign = Database::get()->queryArray("SELECT * FROM assignment_submit WHERE assignment_id = ?d ",$id);
 
 	$del_submission_msg = delete_submissions($id);
-    //if (!empty($del_submission_msg)) {
     $success_msgs[] = $del_submission_msg;
 	$value = 1;
 	$value1 = 0;
-	foreach ($assign as $row1){
-		$ass = Database::get()->queryArray("SELECT * FROM assignment_submit WHERE assignment_id = ?d LIMIT $assignment->reviews_per_assignment OFFSET  $value ",$id);
+	foreach ($assign as $row1) {
+		$ass = Database::get()->queryArray("SELECT * FROM assignment_submit WHERE assignment_id = ?d LIMIT $assignment->reviews_per_assignment OFFSET $value", $id);
 
-		$rowcount = COUNT($ass);
+		$rowcount = count($ass);
 
 		$count = $assignment->reviews_per_assignment - $rowcount;//oi ergasies pou leipoun
-		foreach($ass as $row2){
-			if ($assignment->submission_type) {
+		foreach($ass as $row2) {
+			if ($assignment->submission_type == 1) { // online text
 				Database::get()->query("INSERT INTO assignment_grading_review ( assignment_id, user_submit_id, user_id, submission_text, submission_date, gid, users_id)
 				VALUES (?d, ?d, ?d, ?s, ?t, ?d, ?d)", $id, $row1->id, $row1->uid, $row1->submission_text, $row1->submission_date, $row1->group_id, $row2->uid)->lastInsertID;
-			}
-			else{
+			} else if ($assignment->submission_type == 0) { // single file submission
 				Database::get()->query("INSERT INTO assignment_grading_review ( assignment_id, user_submit_id, user_id, file_path, file_name, submission_date, gid, users_id)
 				VALUES (?d, ?d, ?d, ?s, ?s, ?t, ?d, ?d)", $id, $row1->id, $row1->uid, $row1->file_path, $row1->file_name, $row1->submission_date, $row1->group_id, $row2->uid)->lastInsertID;
-			}
+			} else if ($assignment->submission_type == 2) { // multiple file submission
+                Session::Messages($langNoPeerReviewMultipleFiles);
+                redirect_to_home_page("modules/work/index.php?course=$course_code&id=$id");
+            }
 		}
-		if ( $count != 0 )
+		if ($count != 0)
 		{
-			$assign1 = Database::get()->queryArray("SELECT * FROM assignment_submit WHERE assignment_id = ?d LIMIT $count OFFSET $value1 ",$id);
+			$assign1 = Database::get()->queryArray("SELECT * FROM assignment_submit WHERE assignment_id = ?d LIMIT $count OFFSET $value1", $id);
 			foreach ($assign1 as $row3)
 			{
-				if ($assignment->submission_type) {
+				if ($assignment->submission_type == 1) { // online text
 					Database::get()->query("INSERT INTO assignment_grading_review ( assignment_id, user_submit_id, user_id, submission_text, submission_date, gid, users_id)
 					VALUES (?d, ?d, ?d, ?s, ?t, ?d, ?d)", $id, $row1->id, $row1->uid, $row1->submission_text, $row1->submission_date, $row1->group_id, $row3->uid)->lastInsertID;
-				}
-				else{
+				} else if ($assignment->submission_type == 0) { // single file submission
 					Database::get()->query("INSERT INTO assignment_grading_review ( assignment_id, user_submit_id, user_id, file_path, file_name, submission_date, gid, users_id)
 					VALUES (?d, ?d, ?d, ?s, ?s, ?t, ?d, ?d)", $id, $row1->id, $row1->uid, $row1->file_path, $row1->file_name, $row1->submission_date, $row1->group_id, $row3->uid)->lastInsertID;
-				}
+				} else if ($assignment->submission_type == 2) { // multiple file submission
+                    Session::Messages($langNoPeerReviewMultipleFiles);
+                    redirect_to_home_page("modules/work/index.php?course=$course_code&id=$id");
+                }
 			}
 		}
 		$value++;
@@ -5998,7 +6004,7 @@ function submit_grades($grades_id, $grades, $email = false) {
                             $group_id = Database::get()->querySingle("SELECT group_id FROM assignment_submit WHERE id = ?d", $sid)->group_id;
                             $user_ids = Database::get()->queryArray("SELECT user_id FROM group_members WHERE group_id = ?d", $group_id);
                             foreach ($user_ids as $user_id) {
-                                update_gradebook_book($user_id, $assignment->id, $grade/$assignment->max_grade, GRADEBOOK_ACTIVITY_ASSIGNMENT);
+                                update_gradebook_book($user_id->user_id, $assignment->id, $grade/$assignment->max_grade, GRADEBOOK_ACTIVITY_ASSIGNMENT);
                             }
                         } else {
                             $quserid = Database::get()->querySingle("SELECT uid FROM assignment_submit WHERE id = ?d", $sid)->uid;

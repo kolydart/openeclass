@@ -33,9 +33,10 @@ require_once 'modules/message/class.msg.php';
  * @return string
  */
 function getUserLessonInfo($uid) {
-    global $teacher_courses_count, $student_courses_count, $langCourse, $langActions;
-    global $session, $lesson_ids, $courses, $urlServer, $langUnregCourse, $langAdm, $langFavorite;
-    global $langNotEnrolledToLessons, $langWelcomeProfPerso, $langWelcomeStudPerso, $langWelcomeSelect, $langCode;
+    global $teacher_courses_count, $student_courses_count, $langCourse, $langActions,
+           $session, $lesson_ids, $courses, $urlServer, $langUnregCourse, $langAdm, $langFavorite,
+           $langNotEnrolledToLessons, $langWelcomeProfPerso, $langWelcomeStudPerso,
+           $langWelcomeSelect, $langPreview, $langOfCourse, $langPopular,$langThisCourseDescriptionIsEmpty,$langRegCourses;
 
     $lesson_content = '';
     $lesson_ids = array();
@@ -46,6 +47,9 @@ function getUserLessonInfo($uid) {
                              course.prof_names professor,
                              course.lang,
                              course.visible visible,
+                             course.description description,
+                             course.course_image course_image,
+                             course.popular_course popular_course,
                              course_user.status status,
                              course_user.favorite favorite
                         FROM course JOIN course_user
@@ -65,6 +69,7 @@ function getUserLessonInfo($uid) {
     //getting user's lesson info
     $teacher_courses_count = 0;
     $student_courses_count = 0;
+
     if ($myCourses) {
         $lesson_content .= "<table id='portfolio_lessons' class='table table-default portfolio-courses-table'>";
         $lesson_content .= "<thead class='sr-only'><tr><th>$langCourse</th><th>$langActions</th></tr></thead>";
@@ -85,9 +90,64 @@ function getUserLessonInfo($uid) {
             }
             $lesson_content .= "<tr class='$visclass'>
 			  <td class='border-top-0 border-start-0 border-end-0 ps-0'>
-			  <div class='d-inline-flex'>
-                    <a class='TextSemiBold fs-6' href='{$urlServer}courses/$data->code/'>" . q(ellipsize($data->title, 64)) . "</a>
-                    <div class='TextSemiBold text-md-end text-start'> <span class='blackBlueText'>(" . q($data->public_code) . ")</span></div>
+			  <div>
+                    <a class='TextSemiBold fs-6' href='{$urlServer}courses/$data->code/'>" . q(ellipsize($data->title, 64)) . "
+                        &nbsp<span class='TextSemiBold text-md-end text-start'> <span class='blackBlueText'>(" . q($data->public_code) . ")</span></span>
+                    </a>
+
+                    <button class='ClickCoursePortfolio border-0 rounded-pill bg-transparent' id='{$data->code}' type'button' class='btn btn-secondary' data-bs-toggle='tooltip' data-bs-placement='top' title='$langPreview&nbsp$langOfCourse'>
+                        <img class='ClickCourseModalImg' src='{$urlServer}template/modern/img/info_a.svg'>
+                    </button>
+
+                    <div id='PortfolioModal{$data->code}' class='modal'>
+
+                        <div class='modal-content modal-content-opencourses overflow-auto px-lg-4 py-lg-3'>
+                            <div class='row'>
+                                <div class='col-10'>
+                                    <span class='courseInfoText TextExtraBold blackBlueText'>{$data->title}</span>
+                                    <span class='courseInfoText TextMedium blackBlueText ms-1'>({$data->public_code})</span>
+                                </div>
+                                <div class='col-2'>
+                                    <button type='button' class='close btn-sm text-uppercase d-flex justify-content-center align-items-center float-end' style='font-size:30px;'>&times;</button>
+                                </div>
+                            </div>
+                            
+                            <hr class='hr-OpenCourses'>
+
+                            <div class='row mb-3'>
+                                <div class='col-9 d-flex justify-content-start align-items-start ps-4'>
+                                    <p class='small-text TextRegular blackBlueText d-inline-flex align-items-center'>
+                                        <span class='fa fa-user lightBlueText pe-2 pt-0'></span>
+                                        <span class='blackBlueText'>{$data->professor}</span>
+                                    </p>
+                                </div>
+                                <div class='col-3 d-flex justify-content-end align-items-center pe-4 blackBlueText'>
+                                    " . course_access_icon($data->visible) . " ";
+                                     if($data->popular_course == 1){
+                                        $lesson_content .= "<span class='fa fa-star textgreyColor ps-3' data-bs-toggle='tooltip' data-bs-placement='top' title='' data-bs-original-title='$langPopular&nbsp$langCourse'' aria-label='$langPopular&nbsp$langCourse'></span>";
+                                     }
+                                $lesson_content .= "</div>
+                            </div>
+                        
+                            
+                            <div class='col-12 d-flex justify-content-center align-items-start ps-md-5 pe-md-5'>";
+                                if($data->course_image == NULL){
+                                    $lesson_content .= "<img class='openCourseImg' src='{$urlServer}template/modern/img/ph1.jpg' alt='{$data->course_image}' /></a>";
+                                }else{
+                                    $lesson_content .= "<img class='openCourseImg' src='{$urlServer}courses/{$data->code}/image/{$data->course_image}' alt='{$data->course_image}' /></a>";
+                                }
+                            $lesson_content .= "</div>
+
+                            <div class='col-12 openCourseDes mt-3 ps-md-5 pe-md-5 blackBlueText pb-3'> ";
+                                if(empty($data->description)){
+                                    $lesson_content .= "<p class='text-center'>$langThisCourseDescriptionIsEmpty</p>";
+                                }else{
+                                    $lesson_content .= "{$data->description}";
+                                }
+                                $lesson_content .= "</div>
+                        </div>
+
+                    </div>
               </div>
 			  <div><small class='small-text textgreyColor TextSemiBold'>" . q($data->professor) . "</small></div></td>";
             $lesson_content .= "<td class='border-top-0 border-start-0 border-end-0 text-end align-top pe-0'><div class='col-12'><div class='d-inline-flex'>";
@@ -103,6 +163,7 @@ function getUserLessonInfo($uid) {
         }
         $lesson_content .= "</tbody></table>";
     } else { // if we are not registered to courses
+        $lesson_content .= "<div class='col-12 d-flex justify-content-start'><a class='btn submitAdminBtn mb-1' href='{$urlServer}modules/auth/courses.php'>$langRegCourses</a></div>";
         $lesson_content .= "<div class='col-sm-12'><div class='alert alert-warning'>$langNotEnrolledToLessons!</div></div>";
         if ($session->status == USER_TEACHER) {
             $lesson_content .= "<div class='col-sm-12'><div class='alert alert-info'>$langWelcomeSelect $langWelcomeProfPerso</div></div>";
@@ -123,7 +184,7 @@ function getUserLessonInfo($uid) {
  */
 function getUserAnnouncements($lesson_id, $type='', $to_ajax=false, $filter='') {
 
-    global $urlAppend, $dateFormatLong, $langAdminAn, $langNoRecentAnnounce;
+    global $urlAppend, $langAdminAn;
 
     if ($type == 'more') {
         $sql_append = '';
@@ -193,11 +254,11 @@ function getUserAnnouncements($lesson_id, $type='', $to_ajax=false, $filter='') 
         return $arr_an;
     } else {
         //Προσθήκη μετρητή ώστε να εμφανίζονται μέχρι 2 ανακοινώσεις σαν pagination
-        // Ολες οι τελευταιες ανακοινωσεις εμφανιζονται οταν πατησει ο χρηστης το κουμπι.
+        // Ολες οι τελευταίες ανακοινωσεις εμφανίζονται όταν πατήσει ο χρήστης το κουμπί.
         $counterAn = 0;
         $ann_content = '';
         if($q){
-           $ann_content .= "<ul class='list-group list-group-flush mb-4'>";
+           $ann_content .= "<ul class='list-group list-group-flush mb-2'>";
         }
         foreach ($q as $ann) {
             if ($counterAn <= 1){
@@ -207,8 +268,8 @@ function getUserAnnouncements($lesson_id, $type='', $to_ajax=false, $filter='') 
                     $ann_date = format_locale_date(strtotime($ann->an_date));
                     $ann_content .= "
                         <li class='list-group-item ps-0 pe-0'>
-                            <div class='item-wholeline text-center'>
-                                <a class='TextSemiBold fs-6' href='$ann_url'>" . q(ellipsize($ann->title, 60)) . "</a>
+                            <div class='item-wholeline text-start'>
+                                <a class='TextSemiBold' href='$ann_url'>" . q(ellipsize($ann->title, 60)) . "</a>
                                     
                                 <div class='blackBlueText TextBold'>$course_title</div>
                                 <div class='blackBlueText TextRegular'>$ann_date</div>
@@ -219,8 +280,8 @@ function getUserAnnouncements($lesson_id, $type='', $to_ajax=false, $filter='') 
                     $ann_date = format_locale_date(strtotime($ann->an_date));
                     $ann_content .= "
                     <li class='list-group-item ps-0 pe-0'>
-                        <div class='item-wholeline text-center'>
-                            <a class='TextSemiBold fs-6' href='$ann_url'>" . q(ellipsize($ann->title, 60)) . "</a>
+                        <div class='item-wholeline text-start'>
+                            <a class='TextSemiBold' href='$ann_url'>" . q(ellipsize($ann->title, 60)) . "</a>
                             
                             <div class='blackBlueText TextBold'>$langAdminAn&nbsp; <span class='fa fa-user text-danger'></span></div>
                             <div class='blackBlueText TextRegular'>$ann_date</div>
@@ -243,7 +304,7 @@ function getUserAnnouncements($lesson_id, $type='', $to_ajax=false, $filter='') 
  */
 function getUserMessages() {
 
-    global $uid, $urlServer, $langFrom, $dateFormatLong, $langDropboxNoMessage;
+    global $uid, $urlServer, $langFrom;
 
     $message_content = '';
 
@@ -251,9 +312,9 @@ function getUserMessages() {
     $msgs = $mbox->getInboxMsgs('', 5);
     $counterMs = 0;
     if($msgs){
-         $message_content .= "<ul class='list-group list-group-flush mb-4'>";
+         $message_content .= "<ul class='list-group list-group-flush mb-2'>";
     }
-   
+
     foreach ($msgs as $message) {
         if($counterMs <= 1){
             if ($message->course_id > 0) {
@@ -263,7 +324,7 @@ function getUserMessages() {
             }
             $message_date = format_locale_date($message->timestamp);
             $message_content .= "<li class='list-group-item ps-0 pe-0'>
-                                    <div class='item-wholeline text-center'>
+                                    <div class='item-wholeline text-start'>
                                         <div class='text-title TextSemiBold'><span>$langFrom:</span>".display_user($message->author_id, false, false)."</div>
                                         
                                         <a class='TextSemiBold fs-6 mt-2' href='{$urlServer}modules/message/index.php?mid=$message->id'>" .q($message->subject)."</a>
@@ -284,7 +345,7 @@ function getUserMessages() {
 
 /**
  * @brief check if user has accepted or rejected the current privacy policy
- * @global integer $uid
+ * @param $uid
  * @return boolean
  */
 function user_has_accepted_policy($uid) {
@@ -315,7 +376,7 @@ function user_accept_policy($uid, $accept = true) {
  * @DIKH MOY SYNARTHSH GIA NA FTIAKSW TO PAGINATION ME TIS EIKONES TWN MATHIMATWN STO PORTFOLIO BLADE ARXEIO
 */
 
-function getUserCoursesPic($uid){
+function getUserCoursesPic($uid) {
 
     global $session;
     if ($session->status == USER_TEACHER) {

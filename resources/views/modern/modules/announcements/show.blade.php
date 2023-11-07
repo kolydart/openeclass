@@ -9,8 +9,8 @@
 
         <div class="row rowMedium">
 
-            <div id="background-cheat-leftnav" class="col-xl-2 col-lg-3 col_sidebar_active"> 
-                <div class="d-none d-sm-block d-sm-none d-md-block d-md-none d-lg-block">
+            <div id="background-cheat-leftnav" class="col-xl-2 col-lg-3 col_sidebar_active d-flex justify-content-start align-items-strech ps-lg-0 pe-lg-3"> 
+                <div class="d-none d-sm-block d-sm-none d-md-block d-md-none d-lg-block ContentLeftNav">
                     @include('layouts.partials.sidebar',['is_editor' => $is_editor])
                 </div>
             </div>
@@ -38,23 +38,20 @@
 
                        
                         <div class='col-12'>
-                            <div class='panel panel-default'>
-                                <div class='panel-heading'>
-                                   <div class='panel-title'>{!! $title !!}</div>
+                            <div class="card panelCard px-lg-4 py-lg-3">
+                                <div class='card-header border-0 bg-white d-flex justify-content-between align-items-center'>
+                                    <div class='text-uppercase normalColorBlueText TextBold fs-6'>{!! $title !!}</div>
                                 </div>
-                                <div class='panel-body'>
-                                    <span class='text-secondary'>{!! $content !!}</span>
+                                <div class="card-body">
+                                   
+                                    {!! $content !!}
                                     @if ($tags_list)
-                                        <div class='text-start'>{{ trans('langTags') }}: {!! $tags_list !!}</div>
+                                        <p class='card-text'>{{ trans('langTags') }}: {!! $tags_list !!}</p>
                                     @endif
                                 </div>
-                                <div class='panel-footer'>
-                                    
-                                    <div class='text-center info-date'>
-                                        {!! $date !!}
-                                    </div>
+                                <div class='card-footer small-text bg-white border-0'>
+                                    {!! $date !!}
                                 </div>
-                                
                             </div>
                         </div>
                         

@@ -507,15 +507,70 @@ if ($is_editor) {
                 <tr><td class='not_visible nocategory-link'> - $langNoGroupInCategory - </td>
                 <td></td></tr></table></div></div></div>";
         } elseif ($num_of_groups > 0) {
-            $tool_content .= "<div class='table-responsive'>
-                <table class='table-default'>
-                <tr class='list-header'>
-                  <th class='ps-3'>$langGroupTeam</th>
-                  <th width='250'>$langGroupTutor</th>
-                  <th width='50'>$langGroupMembersNum</th>
-                  <th width='50'>$langMax</th>
-                  <th class='text-center' style='width:45px;'>".icon('fa-gears', $langActions)."</th>
-                </tr>";
+        //     $tool_content .= "<div class='table-responsive'>
+        //         <table class='table-default'>
+        //         <tr class='list-header'>
+        //           <th class='ps-3'>$langGroupTeam</th>
+        //           <th width='250'>$langGroupTutor</th>
+        //           <th width='50'>$langGroupMembersNum</th>
+        //           <th width='50'>$langMax</th>
+        //           <th class='text-center' style='width:45px;'>".icon('fa-gears', $langActions)."</th>
+        //         </tr>";
+
+        // foreach ($groupSelect as $group) {
+        //     if (!is_group_visible($group->id, $course_id)) {
+        //         $link_class = 'not_visible';
+        //     } else {
+        //         $link_class = '';
+        //     }
+        //     initialize_group_info($group->id);
+        //     $tool_content .= "<tr class='$link_class'>";
+        //     $tool_content .= "<td><a href='group_space.php?course=$course_code&amp;group_id=$group->id'>" . q($group_name) . "</a>
+        //             <br><p style='padding-top:10px;'>$group_description</p>";
+        //     if ($user_group_description && $student_desc) {
+        //         $tool_content .= "<small><a href = 'javascirpt:void(0);' data-bs-toggle = 'modal' data-bs-content='".q($user_group_description)."' data-bs-target = '#userFeedbacks' ><span class='fa fa-comments' ></span > $langCommentsUser</a ></small>";
+        //     }
+        //     $tool_content .= "</td><td class='center'>";
+        //     foreach ($tutors as $t) {
+        //         $tool_content .= display_user($t->user_id) . "<br>";
+        //     }
+        //     $tool_content .= "</td><td class='text-center'>$member_count</td>";
+        //     if ($max_members == 0) {
+        //         $tool_content .= "<td class='text-center'>&mdash;</td>";
+        //     } else {
+        //         $tool_content .= "<td class='text-center'>$max_members</td>";
+        //     }
+
+        //     if (is_group_visible($group->id, $course_id)) {
+        //         $visibility_text = $langViewHide;
+        //         $visibility_icom = 'fa-eye-slash';
+        //         $visibility_url = 'choice=disable';
+        //     } else {
+        //         $visibility_text = $langViewShow;
+        //         $visibility_icom = 'fa-eye';
+        //         $visibility_url = 'choice=enable';
+        //     }
+
+        //     $tool_content .= "<td class='option-btn-cell text-center'>" .
+        //             action_button(array(
+        //                 array('title' => $langEditChange,
+        //                     'url' => "group_edit.php?course=$course_code&amp;category=$group->category_id&amp;group_id=$group->id",
+        //                     'icon' => 'fa-edit'),
+        //                 array('title' => $langAddManyUsers,
+        //                     'url' => "muladduser.php?course=$course_code&amp;group_id=$group->id",
+        //                     'icon' => 'fa-plus-circle'),
+        //                 array('title' => $visibility_text,
+        //                     'url' => "$_SERVER[SCRIPT_NAME]?course=$course_code&amp;group_id=$group->id&amp;$visibility_url",
+        //                     'icon' => $visibility_icom),
+        //                 array('title' => $langDelete,
+        //                     'url' => "$_SERVER[SCRIPT_NAME]?course=$course_code&amp;delete=$group->id",
+        //                     'icon' => 'fa-times',
+        //                     'class' => 'delete',
+        //                     'confirm' => $langConfirmDelete))) .
+        //                 "</td></tr>";
+        //     $totalRegistered += $member_count;
+        // }
+        // $tool_content .= "</table></div><br>";
 
         foreach ($groupSelect as $group) {
             if (!is_group_visible($group->id, $course_id)) {
@@ -524,23 +579,6 @@ if ($is_editor) {
                 $link_class = '';
             }
             initialize_group_info($group->id);
-            $tool_content .= "<tr class='$link_class'>";
-            $tool_content .= "<td><a href='group_space.php?course=$course_code&amp;group_id=$group->id'>" . q($group_name) . "</a>
-                    <br><p style='padding-top:10px;'>$group_description</p>";
-            if ($user_group_description && $student_desc) {
-                $tool_content .= "<small><a href = 'javascirpt:void(0);' data-bs-toggle = 'modal' data-content='".q($user_group_description)."' data-bs-target = '#userFeedbacks' ><span class='fa fa-comments' ></span > $langCommentsUser</a ></small>";
-            }
-            $tool_content .= "</td><td class='center'>";
-            foreach ($tutors as $t) {
-                $tool_content .= display_user($t->user_id) . "<br>";
-            }
-            $tool_content .= "</td><td class='text-center'>$member_count</td>";
-            if ($max_members == 0) {
-                $tool_content .= "<td class='text-center'>&mdash;</td>";
-            } else {
-                $tool_content .= "<td class='text-center'>$max_members</td>";
-            }
-
             if (is_group_visible($group->id, $course_id)) {
                 $visibility_text = $langViewHide;
                 $visibility_icom = 'fa-eye-slash';
@@ -550,27 +588,64 @@ if ($is_editor) {
                 $visibility_icom = 'fa-eye';
                 $visibility_url = 'choice=enable';
             }
+            $tool_content .= "<div class='card panelCard $link_class bg-white rounded-0 mb-4'>
+                                    <div class='card-header bg-light rounded-0 d-flex align-items-center justify-content-between'>
+                                        <a class='ViewGroup TextSemiBold fs-6' href='group_space.php?course=$course_code&amp;group_id=$group->id'>" . q($group_name) . "</a>
+                                        <div>
+                                            " .
+                                            action_button(array(
+                                                array('title' => $langEditChange,
+                                                    'url' => "group_edit.php?course=$course_code&amp;category=$group->category_id&amp;group_id=$group->id",
+                                                    'icon' => 'fa-edit'),
+                                                array('title' => $langAddManyUsers,
+                                                    'url' => "muladduser.php?course=$course_code&amp;group_id=$group->id",
+                                                    'icon' => 'fa-plus-circle'),
+                                                array('title' => $visibility_text,
+                                                    'url' => "$_SERVER[SCRIPT_NAME]?course=$course_code&amp;group_id=$group->id&amp;$visibility_url",
+                                                    'icon' => $visibility_icom),
+                                                array('title' => $langDelete,
+                                                    'url' => "$_SERVER[SCRIPT_NAME]?course=$course_code&amp;delete=$group->id",
+                                                    'icon' => 'fa-times',
+                                                    'class' => 'delete',
+                                                    'confirm' => $langConfirmDelete))) .
+                                                "
+                                        </div>
+                                    </div>
+                                    <div class='card-body rounded-0'>";
+                                    $tool_content .= "<p class='normalBlueText TextSemiBold mb-1 fs-6'>$langGroupTutor</p>";
+                                    if(count($tutors)>0){
+                                        foreach ($tutors as $t) {
+                                            $tool_content .= display_user($t->user_id) . "<br>";
+                                        }
+                                    }else{
+                                        $tool_content .= "<p class='small-text'>$langNoInfoAvailable</p>";
+                                    }
+                                        
+                                                
+                       $tool_content .= "<p class='normalBlueText TextSemiBold mb-1 mt-3 fs-6'>$langDescription</p>";
+                                        if(!empty($group_description)){
+                                            $tool_content .= "<p class='small-text'>$group_description</p>";
+                                        }else{
+                                            $tool_content .= "<p class='small-text'>$langNoInfoAvailable</p>";
+                                        }
+                                         
+                                         if ($user_group_description && $student_desc) {
+                                            $tool_content .= "<small><a href = 'javascirpt:void(0);' data-bs-toggle = 'modal' data-content='".q($user_group_description)."' data-bs-target = '#userFeedbacks' ><span class='fa fa-comments' ></span > $langCommentsUser</a ></small>";
+                                         }
+                  $tool_content .= "</div>
+                                    <div class='card-footer d-flex justify-content-end align-items-center border-0 bg-white pb-3'>";
+                                    if ($max_members == 0) {
+                                        $tool_content .= " <span class='badge bg-info text-white'>$langGroupMembersNum:&nbsp; -- </span>";
+                                    } else {
+                                        $tool_content .= " <span class='badge bg-info text-white'>$langGroupMembersNum:&nbsp;$member_count/$max_members</span>";
+                                    }
+                  $tool_content .= "</div>
+                              </div>";
 
-            $tool_content .= "<td class='option-btn-cell text-center'>" .
-                    action_button(array(
-                        array('title' => $langEditChange,
-                            'url' => "group_edit.php?course=$course_code&amp;category=$group->category_id&amp;group_id=$group->id",
-                            'icon' => 'fa-edit'),
-                        array('title' => $langAddManyUsers,
-                            'url' => "muladduser.php?course=$course_code&amp;group_id=$group->id",
-                            'icon' => 'fa-plus-circle'),
-                        array('title' => $visibility_text,
-                            'url' => "$_SERVER[SCRIPT_NAME]?course=$course_code&amp;group_id=$group->id&amp;$visibility_url",
-                            'icon' => $visibility_icom),
-                        array('title' => $langDelete,
-                            'url' => "$_SERVER[SCRIPT_NAME]?course=$course_code&amp;delete=$group->id",
-                            'icon' => 'fa-times',
-                            'class' => 'delete',
-                            'confirm' => $langConfirmDelete))) .
-                        "</td></tr>";
             $totalRegistered += $member_count;
         }
-        $tool_content .= "</table></div><br>";
+
+
         $tool_content .= "
             <div class='modal fade' id='userFeedbacks' tabindex='-1' role='dialog' aria-labelledby='myModalLabel'>
               <div class='modal-dialog' role='document'>
@@ -591,11 +666,11 @@ if ($is_editor) {
     // Begin student view
     // ************************************
     if (($multi_reg == 0) and !$user_visible_groups) {
-        $tool_content .= "<div class='col-sm-12'><div class='alert alert-info text-center'>$langSingleGroupRegInfo</div></div>";
+        $tool_content .= "<div class='col-sm-12 mb-4'><div class='card panelCard'><div class='card-body'><p class='TextRegular fs-6 normalBlueText text-center mb-0'>$langSingleGroupRegInfo</p></div></div></div>";
     } else if ($multi_reg == 1) {
-        $tool_content .= "<div class='col-sm-12'><div class='alert alert-info text-center'>$langMultipleGroupRegInfo</div></div>";
+        $tool_content .= "<div class='col-sm-12 mb-4'><div class='card panelCard'><div class='card-body'><p class='TextRegular fs-6 normalBlueText text-center mb-0'>$langMultipleGroupRegInfo</p></div></div></div>";
     } else if (($multi_reg == 2)) {
-        $tool_content .= "<div class='col-sm-12'><div class='alert alert-info text-center'>$langCategoryGroupRegInfo</div></div>";
+        $tool_content .= "<div class='col-sm-12 mb-4'><div class='card panelCard'><div class='card-body'><p class='TextRegular fs-6 normalBlueText text-center mb-0'>$langCategoryGroupRegInfo</p></div></div></div>";
     }
 
     $q = Database::get()->queryArray("SELECT id FROM `group` WHERE course_id = ?d AND (category_id = 0 OR category_id IS NULL) ORDER BY name", $course_id);
@@ -610,80 +685,173 @@ if ($is_editor) {
                 <tr><td class='not_visible nocategory-link'> - $langNoGroupInCategory - </td>
                 </tr></table></div></div></div>";
     } else {
-        $tool_content .= "<div class='table-responsive'>
-            <table class='table-default'>
-                <tr class='list-header'>
-                  <th class='text-start'>$langGroupTeam</th>
-                  <th width='250'>$langGroupTutor</th>
-                  <th width='50'>$langGroupMembersNum</th>
-                  <th width='50'>$langMax</th>
-                  <th class='text-center' style='width:45px;'>".icon('fa-gears', $langActions)."</th>
-                </tr>";
+        // $tool_content .= "<div class='table-responsive'>
+        //     <table class='table-default'>
+        //         <tr class='list-header'>
+        //           <th class='text-start'>$langGroupTeam</th>
+        //           <th width='250'>$langGroupTutor</th>
+        //           <th width='50'>$langGroupMembersNum</th>
+        //           <th width='50'>$langMax</th>
+        //           <th class='text-center' style='width:45px;'>".icon('fa-gears', $langActions)."</th>
+        //         </tr>";
+        // foreach ($q as $row) {
+        //     $group_id = $row->id;
+
+        //     initialize_group_info($group_id);
+        //     // group visibility
+        //     if (!is_group_visible($group_id, $course_id)) {
+        //         continue;
+        //     }
+
+        //     $tool_content .= "<tr>";
+        //     $tool_content .= "<td class='text-start'>";
+        //     // Allow student to enter group only if he's a member
+        //     if ($is_member or $is_tutor) {
+        //         $tool_content .= "<a href='group_space.php?course=$course_code&amp;group_id=$group_id'>" . q($group_name) .
+        //                 "</a> <span class='TextBold text-uppercase blackBlueText'>--$langMyGroup--</span>";
+        //     } else {
+        //         $full_group_message = '';
+        //         if ($max_members > 0 and $max_members == $member_count) {
+        //            $full_group_message = " <span class='TextBold text-uppercase orangeText'>--$langGroupFull--</span>";
+        //         }
+        //         $tool_content .= q($group_name) . "$full_group_message";
+        //     }
+        //     $tool_content .= "<br><p style='padding-top:10px;'>$group_description</p>";
+        //     if ($student_desc) {
+        //         if ($user_group_description) {
+        //             $tool_content .= "<br><span class='small'><i>$user_group_description</i></span>&nbsp;&nbsp;" .
+        //                     icon('fa-edit', $langModify, "group_description.php?course=$course_code&amp;group_id=$group_id") . "&nbsp;" .
+        //                     icon('fa-times', $langDelete, "group_description.php?course=$course_code&amp;group_id=$group_id&amp;delete=true", 'onClick="return confirmation();"');
+        //         } elseif ($is_member) {
+        //             $tool_content .= "<br><a href='group_description.php?course=$course_code&amp;group_id=$group_id'><i>$langAddDescription</i></a>";
+        //         } 
+        //     }
+        //     $tool_content .= "</td>";
+        //     $tool_content .= "<td class='text-center'>";
+        //     foreach ($tutors as $t) {
+        //         $tool_content .= display_user($t->user_id) . "<br>";
+        //     }
+        //     $tool_content .= "</td>";
+        //     $tool_content .= "<td class='text-center'>$member_count</td><td class='text-center'>" .
+        //             ($max_members ? $max_members : '&mdash;') . "</td>";
+        //     // If self-registration and multi registration allowed by admin and group is not full
+        //     $tool_content .= "<td class='text-center'>";
+        //     $group_id_indirect = getIndirectReference($group_id);
+        //     $control = '';
+
+        //     if ($uid) {
+        //         if (!$is_member) {
+        //             if (($multi_reg == 0) and (!$user_visible_groups)) {
+        //                 $user_can_register_to_group = true;
+        //             } else if ($multi_reg == 1 or $multi_reg == 2) {
+        //                 $user_can_register_to_group = true;
+        //             } else {
+        //                 $user_can_register_to_group = false;
+        //             }
+        //             if ($self_reg and $user_can_register_to_group and (!$max_members or $member_count < $max_members)) {
+        //                 $control = icon('fa-sign-in', $langRegister, "group_space.php?course=$course_code&amp;selfReg=1&amp;group_id=$group_id_indirect");
+        //             }
+        //         } elseif ($allow_unreg) {
+        //             $control = icon('fa-sign-out', $langUnRegister, "group_space.php?course=$course_code&amp;selfUnReg=1&amp;group_id=$group_id_indirect", " style='color:#d9534f;'");
+        //         }
+        //     }
+        //     $tool_content .= ($control? $control: '&mdash;') . "</td></tr>";
+        //     $totalRegistered += $member_count;
+        // }
+        // $tool_content .= "</table></div>";
+
+
+
+
+
         foreach ($q as $row) {
             $group_id = $row->id;
 
             initialize_group_info($group_id);
+
+           
             // group visibility
             if (!is_group_visible($group_id, $course_id)) {
                 continue;
             }
+            $tool_content .= "<div class='card panelCard bg-white rounded-0 mb-4'>
+                                  <div class='card-header bg-light rounded-0 d-flex justify-content-between align-items-center'>";
+                                        if ($is_member or $is_tutor) {
+                                           $tool_content .= "<a class='ViewGroup TextSemiBold fs-6' href='group_space.php?course=$course_code&amp;group_id=$group_id'>" . q($group_name) .
+                                                            "</a> 
+                                                            <span class='badge bg-success TextSemiBold text-white text-capitalize'>$langMyGroup</span>";
+                                        } else {
+                                            $full_group_message = '';
+                                            if ($max_members > 0 and $max_members == $member_count) {
+                                                $full_group_message = " <span class='badge bg-warning TextSemiBold text-white text-capitalize'>$langGroupFull</span>";
+                                            }
+                                                $tool_content .= q($group_name) . "$full_group_message";
+                                        }
+                $tool_content .= "</div>
+                                  <div class='card-body rounded-0'>
+                                        <p class='normalBlueText TextSemiBold mb-1 fs-6'>$langGroupTutor</p>";
+                                        
+                                        if(count($tutors) > 0){
+                                            foreach ($tutors as $t) {
+                                                $tool_content .= display_user($t->user_id) . "<br>";
+                                            }
+                                        }else{
+                                            $tool_content .= "<p class='small-text'>$langNoInfoAvailable</p>";
+                                        }
+                      $tool_content .= "<p class='normalBlueText TextSemiBold mb-1 mt-3 fs-6'>$langDescription</p>";
+                                        if(!empty($group_description)){
+                                            $tool_content .= "<p class='small-text'>$group_description</p>";
+                                        }else{
+                                            $tool_content .= "<p class='small-text'>$langNoInfoAvailable</p>";
+                                        }
+                                        if ($student_desc) {
+                                            if ($user_group_description) {
+                                                $tool_content .= "<br><span class='small'><i>$user_group_description</i></span>&nbsp;&nbsp;" .
+                                                        icon('fa-edit pe-2', $langModify, "group_description.php?course=$course_code&amp;group_id=$group_id") . "&nbsp;" .
+                                                        icon('fa-times text-danger', $langDelete, "group_description.php?course=$course_code&amp;group_id=$group_id&amp;delete=true", 'onClick="return confirmation();"');
+                                            } elseif ($is_member) {
+                                                $tool_content .= "<br><a href='group_description.php?course=$course_code&amp;group_id=$group_id'><i>$langAddDescription</i></a>";
+                                            } 
+                                        }
+                                    
+                $tool_content .= "</div>
+                                  <div class='card-footer d-flex bg-white border-0 justify-content-between align-items-center'>";
+                                        $group_id_indirect = getIndirectReference($group_id);
+                                        $control = '';
 
-            $tool_content .= "<tr>";
-            $tool_content .= "<td class='text-start'>";
-            // Allow student to enter group only if he's a member
-            if ($is_member or $is_tutor) {
-                $tool_content .= "<a href='group_space.php?course=$course_code&amp;group_id=$group_id'>" . q($group_name) .
-                        "</a> <span class='TextBold text-uppercase blackBlueText'>--$langMyGroup--</span>";
-            } else {
-                $full_group_message = '';
-                if ($max_members > 0 and $max_members == $member_count) {
-                   $full_group_message = " <span class='TextBold text-uppercase orangeText'>--$langGroupFull--</span>";
-                }
-                $tool_content .= q($group_name) . "$full_group_message";
-            }
-            $tool_content .= "<br><p style='padding-top:10px;'>$group_description</p>";
-            if ($student_desc) {
-                if ($user_group_description) {
-                    $tool_content .= "<br><span class='small'><i>$user_group_description</i></span>&nbsp;&nbsp;" .
-                            icon('fa-edit', $langModify, "group_description.php?course=$course_code&amp;group_id=$group_id") . "&nbsp;" .
-                            icon('fa-times', $langDelete, "group_description.php?course=$course_code&amp;group_id=$group_id&amp;delete=true", 'onClick="return confirmation();"');
-                } elseif ($is_member) {
-                    $tool_content .= "<br><a href='group_description.php?course=$course_code&amp;group_id=$group_id'><i>$langAddDescription</i></a>";
-                } 
-            }
-            $tool_content .= "</td>";
-            $tool_content .= "<td class='text-center'>";
-            foreach ($tutors as $t) {
-                $tool_content .= display_user($t->user_id) . "<br>";
-            }
-            $tool_content .= "</td>";
-            $tool_content .= "<td class='text-center'>$member_count</td><td class='text-center'>" .
-                    ($max_members ? $max_members : '&mdash;') . "</td>";
-            // If self-registration and multi registration allowed by admin and group is not full
-            $tool_content .= "<td class='text-center'>";
-            $group_id_indirect = getIndirectReference($group_id);
-            $control = '';
+                                        if ($uid) {
+                                            if (!$is_member) {
+                                                if (($multi_reg == 0) and (!$user_visible_groups)) {
+                                                    $user_can_register_to_group = true;
+                                                } else if ($multi_reg == 1 or $multi_reg == 2) {
+                                                    $user_can_register_to_group = true;
+                                                } else {
+                                                    $user_can_register_to_group = false;
+                                                }
+                                                if ($self_reg and $user_can_register_to_group and (!$max_members or $member_count < $max_members)) {
+                                                    $control = icon('fa-sign-in fs-4', $langRegister, "group_space.php?course=$course_code&amp;selfReg=1&amp;group_id=$group_id_indirect");
+                                                }
+                                            } elseif ($allow_unreg) {
+                                                $control = icon('fa-sign-out fs-4', $langUnRegister, "group_space.php?course=$course_code&amp;selfUnReg=1&amp;group_id=$group_id_indirect", " style='color:#d9534f;'");
+                                            }
+                                        }
+                                        $tool_content .= ($control? $control: '&mdash;');
+                                        if ($max_members == 0) {
+                                            $tool_content .= " <span class='badge bg-info text-white'>$langGroupMembersNum:&nbsp; -- </span>";
+                                        } else {
+                                            $tool_content .= " <span class='badge bg-info text-white'>$langGroupMembersNum:&nbsp;$member_count/$max_members</span>";
+                                        }
+                $tool_content .= "</div>
+                              </div>";
 
-            if ($uid) {
-                if (!$is_member) {
-                    if (($multi_reg == 0) and (!$user_visible_groups)) {
-                        $user_can_register_to_group = true;
-                    } else if ($multi_reg == 1 or $multi_reg == 2) {
-                        $user_can_register_to_group = true;
-                    } else {
-                        $user_can_register_to_group = false;
-                    }
-                    if ($self_reg and $user_can_register_to_group and (!$max_members or $member_count < $max_members)) {
-                        $control = icon('fa-sign-in', $langRegister, "group_space.php?course=$course_code&amp;selfReg=1&amp;group_id=$group_id_indirect");
-                    }
-                } elseif ($allow_unreg) {
-                    $control = icon('fa-sign-out', $langUnRegister, "group_space.php?course=$course_code&amp;selfUnReg=1&amp;group_id=$group_id_indirect", " style='color:#d9534f;'");
-                }
-            }
-            $tool_content .= ($control? $control: '&mdash;') . "</td></tr>";
+
             $totalRegistered += $member_count;
         }
-        $tool_content .= "</table></div>";
+
+
+
+
+
     }
 }
 
@@ -706,7 +874,7 @@ if ($is_editor) {
             }
         }
         $tool_content .= "</div>            
-            <table class='table-default category-links'>";
+            <table class='table-default category-links rounded-0'>";
 
     if ($urlview === '') {
             $urlview = str_repeat('0', $aantalcategories);
